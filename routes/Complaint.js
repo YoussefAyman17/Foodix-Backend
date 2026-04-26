@@ -3,7 +3,7 @@ let router=express.Router();
 
 
 let{auth}=require('../Middlewares/auth')
-let {createComplaint,getAllComplaint,getComplaintById,editComplaint,deleteComplaint,changeStatus}=require('../Controller/Complaint')
+let {createComplaint,getAllComplaint,getComplaintById,editComplaint,deleteComplaint,changeStatus}=require('../controllers/Complaint')
 
 router.post('/',auth,createComplaint);
 router.get('/',auth,getAllComplaint);//  restrictTo('admin') 

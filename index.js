@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const app = new express();
 const dotenv=require('dotenv')
 
-const errorHandler=require('./Controller/errorController');
+const errorHandler=require('./controllers/errorController');
 
 dotenv.config();
 
@@ -25,8 +25,8 @@ app.use(express.json());
 let orderRoutes = require("./routes/ordersRoutes");
 let workerRoutes = require("./routes/workersRoutes");
 
-let UserRouter=require('./Routes/User');
-let ComplaintRouter=require('./Routes/Complaint')
+let UserRouter=require('./routes/User');
+let ComplaintRouter=require('./routes/Complaint')
 
 app.use("/api/orders", orderRoutes);
 app.use("/api/worker", workerRoutes);

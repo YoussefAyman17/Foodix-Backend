@@ -2,7 +2,7 @@ let express =require('express');
 let router=express.Router();
 
 //
-let {deleteUserById,editUserById,getUserById,getAllUsers,login,signUP,updatePassword,forgetPassword,verifyResetCode,resetPassword}=require('../Controller/User')
+let {deleteUserById,editUserById,getUserById,getAllUsers,login,signUP,updatePassword,forgetPassword,verifyResetCode,resetPassword}=require('../controllers/User')
 let {auth}=require('../Middlewares/auth');
 
 
