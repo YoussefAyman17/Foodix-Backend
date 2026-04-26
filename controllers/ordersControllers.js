@@ -83,6 +83,7 @@ const updateOrderStatus = async (req, res) => {
   try {
     const orderId = req.params.id;
     const { newStatus } = req.body;
+    const io = req.app.get("socketio");
     if (!newStatus) {
       return res.status(400).json({
         message: "Please provide a new status",
@@ -97,6 +98,19 @@ const updateOrderStatus = async (req, res) => {
     );
     if (!newOrder) {
       return res.status(404).json({ message: "Order is not found" });
+    }
+    if (newStatus === "On the way") {
+      io.to(orderId).emit("orderStartedMoving", {
+        message:
+          "The delivery has received the order and is on his way to you!",
+        deliveryPersonId: updatedOrder.deliveryPerson,
+      });
+    }
+    if (newStatus === "Delivered") {
+      io.to(orderId).emit("orderFinished", {
+        message:
+          "Your order has been delivered successfully, thank you for using Foodix!",
+      });
     }
     return res.status(200).json({
       message: "Order status updated successfully",
