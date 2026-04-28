@@ -1,4 +1,5 @@
 const OrderModel = require("../models/orderModel");
+const userModel = require("../models/userModel");
 const WorkerModel = require("../models/workerModel");
 
 const getAllWorkers = async (req, res) => {
@@ -18,7 +19,7 @@ const getAllWorkers = async (req, res) => {
 const getOnlineDelivery = async (req, res) => {
   try {
     let OnlineDeliveryWorkers = await WorkerModel.find({
-      role: "delivery",
+      role: "Delivery",
       "deliveryDetails.isOnline": true,
     });
 
@@ -36,9 +37,9 @@ const getOnlineDelivery = async (req, res) => {
 
 const addNewWorker = async (req, res) => {
   try {
-    const { user, role, salary, shift, deliveryDetails } = req.body;
+    const { userId, role, salary, shift, deliveryDetails } = req.body;
 
-    const existingWorker = await WorkerModel.findOne({ user: user });
+    const existingWorker = await WorkerModel.findOne({ userId: userId });
     if (existingWorker) {
       return res
         .status(400)
@@ -56,7 +57,7 @@ const addNewWorker = async (req, res) => {
     }
 
     const newWorker = await WorkerModel.create({
-      user,
+      userId,
       role,
       salary,
       shift,
@@ -79,10 +80,35 @@ const updateWorkerData = async (req, res) => {
   try {
     const workerId = req.params.id;
 
+    const currentUserId = req.user.id;
+    const currentUserRole = req.user.role;
+
+    const workerToUpdate = await WorkerModel.findById(workerId);
+
+    if (!workerToUpdate) {
+      return res.status(404).json({ message: "Worker not found" });
+    }
+
+    const isOwner =
+      workerToUpdate.userId.toString() === currentUserId.toString();
+    const isAdmin = currentUserRole === "Admin";
+
+    if (!isOwner && !isAdmin) {
+      return res
+        .status(403)
+        .json({ message: "You don't have permission to edit this data" });
+    }
+
     const updates = { ...req.body };
 
-    if (updates.user) {
-      delete updates.user;
+    if (updates.userId) delete updates.userId;
+    if (updates.user) delete updates.user;
+
+    if (!isAdmin) {
+      if (updates.role) delete updates.role;
+      if (updates.salary) delete updates.salary;
+      if (updates.hireDate) delete updates.hireDate;
+      if (updates.rating) delete updates.rating;
     }
 
     const updatedWorker = await WorkerModel.findByIdAndUpdate(
@@ -94,9 +120,6 @@ const updateWorkerData = async (req, res) => {
       },
     );
 
-    if (!updatedWorker) {
-      return res.status(404).json({ message: "Worker not found" });
-    }
     return res.status(200).json({
       message: "Worker data updated successfully",
       worker: updatedWorker,

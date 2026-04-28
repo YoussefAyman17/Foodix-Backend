@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const workerSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Worker must be linked to a user account"],
@@ -10,7 +10,7 @@ const workerSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ["Chef", "Waiter", "Delivery", "Manager"],
+      enum: ["Admin", "Chef", "Waiter", "Delivery", "Manager"],
       default: "Waiter",
     },
     salary: { type: Number, required: true },
@@ -33,6 +33,16 @@ const workerSchema = new mongoose.Schema(
       type: String,
       enum: ["Active", "On Leave", "Terminated"],
       default: "Active",
+    },
+    hireDate: {
+      type: Date,
+      default: Date.now,
+    },
+    rating: {
+      type: Number,
+      min: [0.0, "Rating cannot be less than 0"],
+      max: [5.0, "Rating cannot be more than 5"],
+      default: 0.0,
     },
   },
   { timestamps: true },

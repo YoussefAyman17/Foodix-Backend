@@ -3,12 +3,12 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
-const { handleDeliverySockets } = require("./Sockets/SocketController");
+const { handleDeliverySockets } = require("./sockets/SocketController");
 
 const app = new express();
 const dotenv = require("dotenv");
 
-const errorHandler = require("./Controller/errorController");
+const errorHandler = require("./controllers/errorControllers");
 
 dotenv.config();
 const server = http.createServer(app);
@@ -26,16 +26,16 @@ mongoose
 app.use(cors());
 app.use(express.json());
 
-let orderRoutes = require("./routes/ordersRoutes");
-let workerRoutes = require("./routes/workersRoutes");
+let OrderRouter = require("./routes/orderRoutes");
+let WorkerRouter = require("./routes/workerRoutes");
 
-let UserRouter = require("./Routes/User");
-let ComplaintRouter = require("./Routes/Complaint");
+let UserRouter = require("./routes/userRoutes");
+let ComplaintRouter = require("./routes/complaintRoutes");
 
-app.use("/api/orders", orderRoutes);
-app.use("/api/worker", workerRoutes);
-app.use("/api/user", UserRouter);
-app.use("/api/complaint", ComplaintRouter);
+app.use("/api/orders", OrderRouter);
+app.use("/api/workers", WorkerRouter);
+app.use("/api/users", UserRouter);
+app.use("/api/complaints", ComplaintRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: req.url + "not found" });

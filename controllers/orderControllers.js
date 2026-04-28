@@ -15,7 +15,7 @@ const getAllOrders = async (req, res) => {
 
 const getUserOrders = async (req, res) => {
   try {
-    let userId = req.id;
+    let userId = req.user.id;
     let orders = await OrderModel.find({ userId: userId });
     if (!orders) {
       return res.status(400).json({ message: "No Orders Exist" });
