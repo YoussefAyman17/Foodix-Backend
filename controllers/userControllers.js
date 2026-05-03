@@ -9,8 +9,11 @@ const jwt = require("jsonwebtoken");
 
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
-  let newUser = req.body;
-  let user = await userModel.create(newUser);
+  let {userName,email,password,repeatPassword} = req.body;
+  if(password!==repeatPassword){
+     return next(customError("Passwords do not match",400))
+  }
+  let user = await userModel.create({userName,email,password});
   res.status(200).json({ message: "User Created", Data: user });
 });
 

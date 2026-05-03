@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: [true, "Phone number is required"],
+    // required: [true, "Phone number is required"],
     validate: {
       validator: function (val) {
         return /^(?:\+20|0)?1[0125]\d{8}$/.test(val);
@@ -45,15 +45,15 @@ const UserSchema = new mongoose.Schema({
     {
       governorate: {
         type: String,
-        required: [true, "governorate is required"],
+        // required: [true, "governorate is required"],
       },
       city: {
         type: String,
-        required: [true, "City is required"],
+        // required: [true, "City is required"],
       },
       street: {
         type: String,
-        required: [true, "Street is required"],
+        // required: [true, "Street is required"],
       },
     },
   ],
