@@ -32,10 +32,15 @@ let WorkerRouter = require("./routes/workerRoutes");
 let UserRouter = require("./routes/userRoutes");
 let ComplaintRouter = require("./routes/complaintRoutes");
 
+let CategoryRouter = require("./routes/categoryRoutes");
+let MealRouter = require("./routes/mealRoutes");
+
 app.use("/api/orders", OrderRouter);
 app.use("/api/workers", WorkerRouter);
 app.use("/api/users", UserRouter);
 app.use("/api/complaints", ComplaintRouter);
+app.use("/api/categories", CategoryRouter);
+app.use("/api/meals", MealRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: req.url + "not found" });

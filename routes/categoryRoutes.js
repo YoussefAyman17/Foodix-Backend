@@ -1,26 +1,26 @@
 const express = require("express");
 const router = express.Router();
-let { createCategory, getAllCategories, getCategoryById, updateCategory, deleteCategory } = require('../controllers/category')
-const itemRoutes = require("./item");
+let {
+  createCategory,
+  getAllCategories,
+  getCategoryById,
+  updateCategory,
+  deleteCategory,
+} = require("../controllers/categoryControllers");
+const mealRoutes = require("./mealRoutes");
 
+const { auth, restrictTo } = require("../middleWares/auth");
 
+router.use("/:slug/meals", mealRoutes);
 
+router.get("/", getAllCategories);
 
-router.get('/', getAllCategories)
+router.get("/:id", getCategoryById);
 
-router.get('/:id', getCategoryById)
+router.post("/", auth, restrictTo("Admin"), createCategory);
 
+router.patch("/:id", auth, restrictTo("Admin"), updateCategory);
 
-router.post('/', createCategory)
+router.delete("/:id", auth, restrictTo("Admin"), deleteCategory);
 
-router.patch("/:id", updateCategory)
-
-router.delete('/:id', deleteCategory)
-
-
-
-router.use("/:slug/items", itemRoutes);
-
-
-
-module.exports = router
+module.exports = router;

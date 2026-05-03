@@ -5,14 +5,14 @@ const ComplaintSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      // required:[true,"User name is required"],
+      required: [true, "User name is required"],
       minlength: [3, "User name must be at least 3 characters"],
       maxlength: [20, "User name must be at most 20 characters"],
     },
     email: {
       type: String,
-      // required:[true,"Email is required"],
-      unique: true,
+      required: [true, "Email is required"],
+
       validate: {
         validator: function (value) {
           return validator.isEmail(value);
@@ -26,7 +26,7 @@ const ComplaintSchema = new mongoose.Schema(
     },
     service: {
       type: String,
-      // required:[true,"Service is required"],
+      required: [true, "Service is required"],
     },
     message: {
       type: String,
