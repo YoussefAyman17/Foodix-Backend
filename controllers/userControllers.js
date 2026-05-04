@@ -10,8 +10,12 @@ const jwt = require("jsonwebtoken");
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
   let {userName,email,password,repeatPassword} = req.body;
+  const existingUser = await userModel.findOne({ email });
+  if (existingUser) { 
+      return next(new customError('This email is already exists!', 400));
+    }
   if(password!==repeatPassword){
-     return next(customError("Passwords do not match",400))
+     return next(new customError("Passwords do not match",400))
   }
   let user = await userModel.create({userName,email,password});
   res.status(200).json({ message: "User Created", Data: user });

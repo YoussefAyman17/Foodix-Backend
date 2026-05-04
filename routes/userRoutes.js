@@ -18,7 +18,7 @@ let {
 } = require("../controllers/userControllers");
 let { auth, restrictTo } = require("../middleWares/auth");
 
-router.post("/", signUP);
+router.post("/signUp", signUP);
 router.post("/login", login);
 
 router.post("/forgetPassword", forgetPassword);
