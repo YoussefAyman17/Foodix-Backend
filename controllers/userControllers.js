@@ -31,7 +31,7 @@ let login = asyncHandler(async (req, res, next) => {
 
   let user = await userModel.findOne({ email });
   if (!user) {
-    return next(new customError("User Not Found"), 404);
+    return next(new customError("User Not Found , Create account", 404));
   }
 
   let valid = await bcrypt.compare(password, user.password);
@@ -44,8 +44,11 @@ let login = asyncHandler(async (req, res, next) => {
   const userRole = workerDetails ? workerDetails.role : "customer";
 
   let token = jwt.sign(
-    { id: user._id, email: user.email, role: userRole },
+    { name:user.userName, id: user._id, email: user.email, role: userRole },
     process.env.SECRET,
+  {
+    expiresIn: "5d"
+  }
   );
   return res.status(200).json({
     message: "Login successful",
@@ -157,8 +160,11 @@ let resetPassword = asyncHandler(async (req, res, next) => {
   const workerDetails = await WorkerModel.findOne({ user: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
   let token = jwt.sign(
-    { id: user._id, email: user.email, role: userRole },
+    { name:user.userName, id: user._id, email: user.email, role: userRole },
     process.env.SECRET,
+  {
+    expiresIn: "5d"
+  }
   );
 
   return res.status(200).json({
@@ -194,8 +200,11 @@ let updatePassword = asyncHandler(async (req, res, next) => {
   const userRole = workerDetails ? workerDetails.role : "customer";
 
   let token = jwt.sign(
-    { id: user._id, email: user.email, role: userRole },
+    { name:user.userName, id: user._id, email: user.email, role: userRole },
     process.env.SECRET,
+  {
+    expiresIn: "5d"
+  }
   );
   return res.status(200).json({
     message: "password updated successfully",
