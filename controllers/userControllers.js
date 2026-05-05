@@ -61,7 +61,7 @@ let forgetPassword = asyncHandler(async (req, res, next) => {
   let { email } = req.body;
   let user = await userModel.findOne({ email });
   if (!user) {
-    return next(new customError("User Not Found", 404));
+    return next(new customError("This email does not exist", 404));
   }
 
   let resetCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -81,7 +81,8 @@ let forgetPassword = asyncHandler(async (req, res, next) => {
 
   const message = `
     Hi ${user.userName} , 
-    We received a request to reset the password on your FoodIX Account.
+    We received a request to reset the password on your
+    FoodIX Account.
     ${resetCode} Enter this code to complete the reset.
     Thanks for helping us keep your account secure.
     The FoodIX Team `;

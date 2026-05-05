@@ -5,12 +5,14 @@ const validator = require("validator");
 const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
+    trim:true,
     required: [true, "User name is required"],
     minlength: [3, "User name must be at least 3 characters"],
     maxlength: [20, "User name must be at most 20 characters"],
   },
   email: {
     type: String,
+    trim:true,
     required: [true, "Email is required"],
     unique: [true, "Email must be unique"],
     validate: {
@@ -21,18 +23,23 @@ const UserSchema = new mongoose.Schema({
     },
   },
 
-  passwordResetCode: String,
+  passwordResetCode:{
+    type:String,
+    trim:true
+  },
   passwordResetExpires: Date,
   passwordResetVerified: Boolean,
 
   password: {
     type: String,
+    trim:true,
     required: [true, "Password is required"],
     minlength: [6, "password must be at least 9 characters"],
     maxlength: [20, "password must be at most 20 characters"],
   },
   phone: {
     type: String,
+    trim:true,
     // required: [true, "Phone number is required"],
     validate: {
       validator: function (val) {
@@ -45,14 +52,17 @@ const UserSchema = new mongoose.Schema({
     {
       governorate: {
         type: String,
+        trim:true,
         // required: [true, "governorate is required"],
       },
       city: {
         type: String,
+        trim:true,
         // required: [true, "City is required"],
       },
       street: {
         type: String,
+        trim:true,
         // required: [true, "Street is required"],
       },
     },
