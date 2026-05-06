@@ -6,6 +6,8 @@ const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
@@ -38,7 +40,7 @@ let login = asyncHandler(async (req, res, next) => {
   if (!valid) {
     return next(new customError("Invalid Email Or Password", 401));
   }
-
+  
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
 
   const userRole = workerDetails ? workerDetails.role : "customer";
@@ -55,6 +57,70 @@ let login = asyncHandler(async (req, res, next) => {
     token,
   });
 });
+
+// login with google 
+
+let googleLogin=asyncHandler(async (req, res, next) =>{
+const { idToken } = req.body;
+
+  if (!idToken) {
+    return next(new customError("Google Token is required", 400));
+  }
+  
+  let ticket;
+  try {
+    ticket = await client.verifyIdToken({
+      idToken: idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+  } catch (err) {
+    return next(new customError("Invalid Google Token", 401));
+  }
+
+  const payload = ticket.getPayload();
+  const { email, name, sub: googleId ,picture } = payload;
+
+    
+   let user =await userModel.findOne({googleId});
+  if (!user) {
+    user =await userModel.findOne({email})
+    if (user) {
+  await userModel.findOneAndUpdate(
+    { _id: user._id },
+    { 
+      $set: { 
+        googleId: googleId, 
+        authProvider: "google" 
+      } 
+    }
+  );
+}else{
+user=await userModel.create({
+userName:name.substring(0,20),
+email,
+googleId,
+authProvider:'google',
+profilePic:picture
+})
+ }
+  }
+
+  const workerDetails = await WorkerModel.findOne({ userId: user._id });
+  const userRole = workerDetails ? workerDetails.role : "customer";
+
+   let token = jwt.sign(
+    { name: user.userName, id: user._id, email: user.email, role: userRole },process.env.SECRET,
+    {
+      expiresIn: "5d",
+    }
+  );
+
+ return res.status(200).json({
+    message: "Login successful",
+    token,
+  });
+
+})
 
 // forget Password
 let forgetPassword = asyncHandler(async (req, res, next) => {
@@ -337,4 +403,5 @@ module.exports = {
   resetPassword,
   getMe,
   updateMe,
+  googleLogin
 };

@@ -15,12 +15,14 @@ let {
   resetPassword,
   getMe,
   updateMe,
+  googleLogin
 } = require("../controllers/userControllers");
 let { auth, restrictTo } = require("../middleWares/auth");
 
 router.post("/signUp", signUP);
 router.post("/login", login);
 
+router.post("/google",googleLogin)
 router.post("/forgetPassword", forgetPassword);
 router.post("/verifyResetCode", verifyResetCode);
 router.put("/resetPassword", resetPassword);

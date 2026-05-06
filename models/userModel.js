@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
     trim:true,
     required: [true, "User name is required"],
     minlength: [3, "User name must be at least 3 characters"],
-    maxlength: [20, "User name must be at most 20 characters"],
+    maxlength: [50, "User name must be at most 50 characters"],
   },
   email: {
     type: String,
@@ -34,9 +34,24 @@ const UserSchema = new mongoose.Schema({
     type: String,
     trim:true,
     required: [true, "Password is required"],
-    minlength: [6, "password must be at least 9 characters"],
+    minlength: [6, "password must be at least 6 characters"],
     maxlength: [20, "password must be at most 20 characters"],
   },
+  googleId:{
+    type:String,
+    trim:true
+  },
+
+  authProvider: {
+    type: String,
+    enum: ["local", "google"],
+    default: "local",
+  },
+  profilePic:{
+    type:String,
+    trim:true
+  },
+
   phone: {
     type: String,
     trim:true,
