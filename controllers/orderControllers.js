@@ -22,6 +22,13 @@ const getAllOrders = asyncErrorHandler(async (req, res, next) => {
       path: "orderItems.foodItem",
       select: "name img price",
     },
+    {
+      path: "deliveryPerson",
+      populate: {
+        path: "userId",
+        select: "userName email phone",
+      },
+    },
   ]);
   if (orders.length === 0) {
     return res.status(404).json({ message: "No Orders Exist" });
@@ -222,14 +229,32 @@ const assignOrderToDeliveryPerson = asyncErrorHandler(
         .json({ message: "Please provide a delivery person ID" });
     }
 
+    const deliveryWorker = await WorkerModel.findOne({
+      _id: deliveryPersonId,
+      role: "Delivery",
+      status: "Active",
+    });
+
+    if (!deliveryWorker) {
+      return res.status(404).json({
+        message: "Active delivery worker is not found",
+      });
+    }
+
     const updatedOrder = await OrderModel.findOneAndUpdate(
       { orderId: orderId },
       {
         deliveryPerson: deliveryPersonId,
-        status: "Preparing",
+        status: "On the way",
       },
       { new: true, runValidators: true },
-    ).populate("deliveryPerson", "name phone");
+    ).populate({
+      path: "deliveryPerson",
+      populate: {
+        path: "userId",
+        select: "userName email phone",
+      },
+    });
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Order is not found" });
