@@ -74,7 +74,7 @@ const mealSchema = new mongoose.Schema(
       {
         size: {
           type: String,
-          enum: ["S", "M", "L", "XL", "Single", "Family", "Double", "Triple"],
+          enum: ["S", "M", "L", "XL", "Single", "Double", "Triple", "Family"],
         },
         extraPrice: {
           type: Number,
@@ -93,6 +93,10 @@ const mealSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       index: true,
+    },
+    orders_count: {
+      type: Number,
+      default: 0,
     },
   },
 

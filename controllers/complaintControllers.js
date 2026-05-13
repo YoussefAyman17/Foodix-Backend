@@ -4,58 +4,74 @@ const customError = require("../utils/customError");
 
 let createComplaint = asyncHandler(async (req, res, next) => {
   let newComplaint = req.body;
-  newComplaint.userId = req.user.id;
+  if (req.user) {
+    newComplaint.userId = req.user.id;
+  }
   let complaint = await complaintModel.create(newComplaint);
-  res.status(200).json({ message: "Complaint Created", Data: complaint });
+  res.status(201).json({ message: "Complaint Created", Data: complaint });
 });
 
 let getAllComplaint = asyncHandler(async (req, res, next) => {
-  let complaints = await complaintModel.find();
+  let complaints = await complaintModel.find().sort({ createdAt: -1 });
 
-  res.status(200).json({ complaints });
+  res.status(200).json({ success: true, count: complaints.length, complaints });
 });
 
 let getComplaintById = asyncHandler(async (req, res, next) => {
   let { id } = req.params;
-  let Complaint = await complaintModel.findById(id);
-
-  if (
-    Complaint.userId.toString() !== req.user.id.toString() &&
-    req.user.role !== "admin"
-  ) {
-    return res
-      .status(403)
-      .json({ message: "You are not allowed to perform this action" });
+  let complaint = await complaintModel.findOne({ id: id });
+  if (!complaint) {
+    return next(new customError("Complaint Not Found", 404));
+  }
+  if (req.user.role !== "Admin") {
+    if (
+      !complaint.userId ||
+      complaint.userId.toString() !== req.user.id.toString()
+    ) {
+      return next(
+        new customError("You are not allowed to view this complaint", 403),
+      );
+    }
   }
 
-  if (Complaint) {
-    res.status(200).json({ Data: Complaint });
-  } else {
-    next(new customError("Complaint Not Found", 404));
-  }
+  res.status(200).json({ success: true, Data: complaint });
 });
 
 let editComplaint = asyncHandler(async (req, res, next) => {
   let { id } = req.params;
+  let complaint = await complaintModel.findOne({ id: id });
 
-  let complaint = await complaintModel.findByIdAndUpdate(id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (complaint) {
-    res.status(200).json({
-      message: "Complaint Updated Successfully",
-      Data: complaint,
-    });
-  } else {
-    next(new customError("Complaint Not Found", 404));
+  if (!complaint) {
+    return next(new customError("Complaint Not Found", 404));
   }
+  if (
+    req.user.role !== "Admin" &&
+    (!complaint.userId ||
+      complaint.userId.toString() !== req.user.id.toString())
+  ) {
+    return next(
+      new customError("You are not allowed to edit this complaint", 403),
+    );
+  }
+
+  const { name, email, subject, service, message } = req.body;
+
+  let updatedComplaint = await complaintModel.findOneAndUpdate(
+    { id: id },
+    { name, email, subject, service, message },
+    { new: true, runValidators: true },
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Complaint Updated Successfully",
+    Data: updatedComplaint,
+  });
 });
 
 let deleteComplaint = asyncHandler(async (req, res, next) => {
   let { id } = req.params;
-  let Complaint = await complaintModel.findByIdAndDelete(id);
+  let Complaint = await complaintModel.findOneAndDelete({ id: id });
   if (Complaint) {
     res
       .status(200)
@@ -67,11 +83,11 @@ let deleteComplaint = asyncHandler(async (req, res, next) => {
 
 let changeStatus = asyncHandler(async (req, res, next) => {
   let { id } = req.params;
-  let { status } = req.body;
+  let { status, adminResponse } = req.body;
 
-  let complaint = await complaintModel.findByIdAndUpdate(
-    id,
-    { status },
+  let complaint = await complaintModel.findOneAndUpdate(
+    { id: id },
+    { status, adminResponse },
     {
       new: true,
       runValidators: true,
@@ -88,30 +104,23 @@ let changeStatus = asyncHandler(async (req, res, next) => {
   }
 });
 
-const getMyComplaints = async (req, res) => {
-  try {
-    const userId = req.user.id;
+const getMyComplaints = asyncHandler(async (req, res, next) => {
+  const userId = req.user.id;
 
-    const complaints = await complaintModel
-      .find({ userId: userId })
-      .sort({ createdAt: -1 });
+  const complaints = await complaintModel
+    .find({ userId: userId })
+    .sort({ createdAt: -1 });
 
-    if (complaints.length === 0) {
-      return res.status(200).json({
-        message: "You haven't submitted any complaints yet",
-        complaints: [],
-      });
-    }
-
-    return res.status(200).json({
-      message: "Complaints retrieved successfully",
-      results: complaints.length,
-      complaints: complaints,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+  res.status(200).json({
+    success: true,
+    message:
+      complaints.length === 0
+        ? "You haven't submitted any complaints yet"
+        : "Complaints retrieved successfully",
+    results: complaints.length,
+    complaints: complaints,
+  });
+});
 
 module.exports = {
   createComplaint,

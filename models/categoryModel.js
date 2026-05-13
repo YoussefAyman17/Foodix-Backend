@@ -26,6 +26,16 @@ const categorySchema = new mongoose.Schema(
       type: String,
       maxLength: [255, "Image URL/path is too long, maximum is 255 characters"],
     },
+    icon: {
+      type: String,
+      required: [true, "Category icon is required"],
+      default: "bi-grid", // أيقونة شبكة افتراضية
+    },
+    color: {
+      type: String,
+      required: [true, "Category color is required"],
+      default: "bg-orange",
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -7,19 +7,29 @@ const {
   updateOrderStatus,
   assignOrderToDeliveryPerson,
 } = require("../controllers/orderControllers");
-const { auth } = require("../middleWares/auth");
+const { auth, restrictTo } = require("../middleWares/auth");
 const router = express.Router();
 
-router.get("/all", auth, getAllOrders);
+router.get("/", auth, restrictTo("Admin"), getAllOrders);
 
-router.get("/myorders", auth, getUserOrders);
+router.get("/myorders", auth, restrictTo("User"), getUserOrders);
 
 router.get("/:id", auth, trackOrder);
 
 router.post("/", auth, checkout);
 
-router.patch("/:id/status", auth, updateOrderStatus);
+router.patch(
+  "/:id/status",
+  auth,
+  restrictTo("Admin", "Delivery"),
+  updateOrderStatus,
+);
 
-router.patch("/:id/assign", auth, assignOrderToDeliveryPerson);
+router.patch(
+  "/:id/assign",
+  auth,
+  restrictTo("Admin"),
+  assignOrderToDeliveryPerson,
+);
 
 module.exports = router;

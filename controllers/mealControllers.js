@@ -6,14 +6,28 @@ const mongoose = require("mongoose");
 const createItem = async (req, res) => {
   try {
     if (req.body.itemId) delete req.body.itemId;
-    const slug = req.params.slug;
-    const category = await Category.findOne({ slug: slug });
-    if (!category) {
+
+    const categoryId = req.body.category;
+
+    if (!categoryId) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Category field is required in the body",
+        });
+    }
+
+    const categoryExists = await Category.findById(categoryId);
+
+    if (!categoryExists) {
       return res
         .status(404)
-        .json({ success: false, message: "Category not found" });
+        .json({ success: false, message: "Category not found in database" });
     }
-    const meal = await Meal.create({ ...req.body, category: category._id });
+
+    const meal = await Meal.create(req.body);
+
     res
       .status(201)
       .json({ success: true, message: "Create Meal success", data: meal });
@@ -33,18 +47,22 @@ const createItem = async (req, res) => {
 
 const getAllItems = async (req, res) => {
   try {
-    const slug = req.params.slug;
-    const category = await Category.findOne({ slug: slug });
+    let filter = {};
 
-    if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found" });
+    if (req.params.slug) {
+      const category = await Category.findOne({ slug: req.params.slug });
+
+      if (!category) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Category not found" });
+      }
+
+      filter = { category: category._id };
     }
 
-    const meals = await Meal.find({ category: category._id }).populate(
-      "category",
-    );
+    const meals = await Meal.find(filter).populate("category");
+
     res.status(200).json({
       success: true,
       message: "Get All Meals success",

@@ -18,6 +18,27 @@ const auth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+const optionalAuth = asyncHandler(async (req, res, next) => {
+  let { authorization } = req.headers;
+
+  if (!authorization) {
+    return next();
+  }
+
+  try {
+    let decoded = await util.promisify(jwt.verify)(
+      authorization,
+      process.env.SECRET,
+    );
+
+    req.user = { id: decoded.id, role: decoded.role };
+  } catch (error) {
+    console.log("Invalid token in optional auth");
+  }
+
+  next();
+});
+
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
@@ -31,4 +52,4 @@ const restrictTo = (...roles) => {
 };
 // const restrictTo=(...roles)=>{};
 
-module.exports = { auth, restrictTo };
+module.exports = { auth, optionalAuth, restrictTo };

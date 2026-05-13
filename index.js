@@ -4,14 +4,20 @@ const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const { handleDeliverySockets } = require("./sockets/SocketController");
-
+const { stripeWebhook } = require("./controllers/orderControllers");
 const app = new express();
 const dotenv = require("dotenv");
 
-const errorHandler = require("./controllers/errorControllers");
-
 dotenv.config();
 const server = http.createServer(app);
+
+app.post(
+  "/api/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook,
+);
+
+const errorHandler = require("./controllers/errorControllers");
 
 mongoose
   .connect(
