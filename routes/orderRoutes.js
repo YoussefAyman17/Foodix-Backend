@@ -6,6 +6,7 @@ const {
   checkout,
   updateOrderStatus,
   assignOrderToDeliveryPerson,
+  getDeliveryOrders,
 } = require("../controllers/orderControllers");
 const { auth, restrictTo } = require("../middleWares/auth");
 const router = express.Router();
@@ -13,6 +14,13 @@ const router = express.Router();
 router.get("/", auth, restrictTo("Admin"), getAllOrders);
 
 router.get("/myorders", auth, restrictTo("User"), getUserOrders);
+
+router.get(
+  "/delivery-orders",
+  auth,
+  restrictTo("Delivery", "Admin"),
+  getDeliveryOrders,
+);
 
 router.get("/:id", auth, trackOrder);
 

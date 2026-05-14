@@ -14,7 +14,8 @@ const auth = asyncHandler(async (req, res, next) => {
     authorization,
     process.env.SECRET,
   );
-  req.user = { id: decoded.id, role: decoded.role };
+  req.user = { id: decoded.id, role: decoded.role, workerId: decoded.workerId };
+
   next();
 });
 
@@ -31,7 +32,11 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
       process.env.SECRET,
     );
 
-    req.user = { id: decoded.id, role: decoded.role };
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,
+      workerId: decoded.workerId,
+    };
   } catch (error) {
     console.log("Invalid token in optional auth");
   }
@@ -42,11 +47,13 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
+      
       return res.status(401).json({
         status: "error",
         message: "you do not have permission to do this action ",
       });
     }
+    
     next();
   };
 };

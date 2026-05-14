@@ -21,7 +21,7 @@ const getOnlineDelivery = async (req, res) => {
     let OnlineDeliveryWorkers = await WorkerModel.find({
       role: "Delivery",
       "deliveryDetails.isOnline": true,
-    });
+    }).populate("userId", "userName email phone");
 
     if (OnlineDeliveryWorkers.length === 0) {
       return res.status(200).json({ message: "[]" });

@@ -187,6 +187,22 @@ const updateOrderStatus = asyncErrorHandler(async (req, res, next) => {
     return res.status(404).json({ message: "Order is not found" });
   }
 
+  if (io) {
+    io.emit("orderStatusChanged", {
+      orderId: updatedOrder.orderId,
+      _id: updatedOrder._id,
+      status: updatedOrder.status,
+      order: updatedOrder,
+    });
+  }
+
+  if (newStatus === "Preparing" && io) {
+    io.emit("orderStatusChanged", {
+      orderId: updatedOrder.orderId,
+      status: "Preparing",
+    });
+  }
+
   if (newStatus === "On the way" && io) {
     io.to(orderId.toString()).emit("orderStartedMoving", {
       message: "The delivery has received the order and is on his way to you!",
@@ -226,15 +242,19 @@ const assignOrderToDeliveryPerson = asyncErrorHandler(
       { orderId: orderId },
       {
         deliveryPerson: deliveryPersonId,
-        status: "Preparing",
+        status: "Assigned",
       },
       { new: true, runValidators: true },
-    ).populate("deliveryPerson", "name phone");
+    ).populate("deliveryPerson", "userName phone");
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Order is not found" });
     }
+    const io = req.app.get("socketio"); // اسحب الـ io هنا كمان
 
+    if (io) {
+      io.emit(`newOrderFor_${deliveryPersonId}`, { order: updatedOrder });
+    }
     return res.status(200).json({
       success: true,
       message: "Order assigned to delivery person successfully",
@@ -276,6 +296,25 @@ const stripeWebhook = async (req, res) => {
   res.status(200).json({ received: true });
 };
 
+const getDeliveryOrders = asyncErrorHandler(async (req, res, next) => {
+  const deliveryId = req.user.workerId;
+  if (!deliveryId) {
+    return next(
+      new customError("You are not authorized as a delivery person", 403),
+    );
+  }
+
+  const orders = await OrderModel.find({ deliveryPerson: deliveryId })
+    .populate("userId", "userName phone")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    results: orders.length,
+    data: orders,
+  });
+});
+
 module.exports = {
   getAllOrders,
   getUserOrders,
@@ -284,4 +323,5 @@ module.exports = {
   updateOrderStatus,
   assignOrderToDeliveryPerson,
   stripeWebhook,
+  getDeliveryOrders,
 };

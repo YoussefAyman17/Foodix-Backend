@@ -6,20 +6,20 @@ const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { OAuth2Client } = require('google-auth-library');
+const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
-  let {userName,email,password,repeatPassword} = req.body;
+  let { userName, email, password, repeatPassword } = req.body;
   const existingUser = await userModel.findOne({ email });
-  if (existingUser) { 
-      return next(new customError('This email is already exists!', 400));
-    }
-  if(password!==repeatPassword){
-     return next(new customError("Passwords do not match",400))
+  if (existingUser) {
+    return next(new customError("This email is already exists!", 400));
   }
-  let user = await userModel.create({userName,email,password});
+  if (password !== repeatPassword) {
+    return next(new customError("Passwords do not match", 400));
+  }
+  let user = await userModel.create({ userName, email, password });
   res.status(200).json({ message: "User Created", Data: user });
 });
 
@@ -40,17 +40,24 @@ let login = asyncHandler(async (req, res, next) => {
   if (!valid) {
     return next(new customError("Invalid Email Or Password", 401));
   }
-  
-  const workerDetails = await WorkerModel.findOne({ userId: user._id });
 
+  const workerDetails = await WorkerModel.findOne({ userId: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
 
+  const workerId = workerDetails ? workerDetails._id : "";
+
   let token = jwt.sign(
-    { name:user.userName, id: user._id, email: user.email, role: userRole },
+    {
+      name: user.userName,
+      id: user._id,
+      email: user.email,
+      role: userRole,
+      workerId,
+    },
     process.env.SECRET,
-  {
-    expiresIn: "5d"
-  }
+    {
+      expiresIn: "5d",
+    },
   );
   return res.status(200).json({
     message: "Login successful",
@@ -58,15 +65,15 @@ let login = asyncHandler(async (req, res, next) => {
   });
 });
 
-// login with google 
+// login with google
 
-let googleLogin=asyncHandler(async (req, res, next) =>{
-const { idToken } = req.body;
+let googleLogin = asyncHandler(async (req, res, next) => {
+  const { idToken } = req.body;
 
   if (!idToken) {
     return next(new customError("Google Token is required", 400));
   }
-  
+
   let ticket;
   try {
     ticket = await client.verifyIdToken({
@@ -78,49 +85,48 @@ const { idToken } = req.body;
   }
 
   const payload = ticket.getPayload();
-  const { email, name, sub: googleId ,picture } = payload;
+  const { email, name, sub: googleId, picture } = payload;
 
-    
-   let user =await userModel.findOne({googleId});
+  let user = await userModel.findOne({ googleId });
   if (!user) {
-    user =await userModel.findOne({email})
+    user = await userModel.findOne({ email });
     if (user) {
-  await userModel.findOneAndUpdate(
-    { _id: user._id },
-    { 
-      $set: { 
-        googleId: googleId, 
-        authProvider: "google" 
-      } 
+      await userModel.findOneAndUpdate(
+        { _id: user._id },
+        {
+          $set: {
+            googleId: googleId,
+            authProvider: "google",
+          },
+        },
+      );
+    } else {
+      user = await userModel.create({
+        userName: name.substring(0, 20),
+        email,
+        googleId,
+        authProvider: "google",
+        profilePic: picture,
+      });
     }
-  );
-}else{
-user=await userModel.create({
-userName:name.substring(0,20),
-email,
-googleId,
-authProvider:'google',
-profilePic:picture
-})
- }
   }
 
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
 
-   let token = jwt.sign(
-    { name: user.userName, id: user._id, email: user.email, role: userRole },process.env.SECRET,
+  let token = jwt.sign(
+    { name: user.userName, id: user._id, email: user.email, role: userRole },
+    process.env.SECRET,
     {
       expiresIn: "5d",
-    }
+    },
   );
 
- return res.status(200).json({
+  return res.status(200).json({
     message: "Login successful",
     token,
   });
-
-})
+});
 
 // forget Password
 let forgetPassword = asyncHandler(async (req, res, next) => {
@@ -227,11 +233,11 @@ let resetPassword = asyncHandler(async (req, res, next) => {
   const workerDetails = await WorkerModel.findOne({ user: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
   let token = jwt.sign(
-    { name:user.userName, id: user._id, email: user.email, role: userRole },
+    { name: user.userName, id: user._id, email: user.email, role: userRole },
     process.env.SECRET,
-  {
-    expiresIn: "5d"
-  }
+    {
+      expiresIn: "5d",
+    },
   );
 
   return res.status(200).json({
@@ -267,11 +273,11 @@ let updatePassword = asyncHandler(async (req, res, next) => {
   const userRole = workerDetails ? workerDetails.role : "customer";
 
   let token = jwt.sign(
-    { name:user.userName, id: user._id, email: user.email, role: userRole },
+    { name: user.userName, id: user._id, email: user.email, role: userRole },
     process.env.SECRET,
-  {
-    expiresIn: "5d"
-  }
+    {
+      expiresIn: "5d",
+    },
   );
   return res.status(200).json({
     message: "password updated successfully",
@@ -403,5 +409,5 @@ module.exports = {
   resetPassword,
   getMe,
   updateMe,
-  googleLogin
+  googleLogin,
 };
