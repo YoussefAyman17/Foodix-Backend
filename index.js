@@ -19,6 +19,10 @@ const errorHandler = require("./controllers/errorControllers");
 const app = express();
 const server = http.createServer(app);
 
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
+dotenv.config({ path: "./config.env" });  
 mongoose
   .connect(process.env.DATABASE)
   .then(() => {
@@ -28,7 +32,7 @@ mongoose
     console.log("error:", err.message);
   });
 
-dotenv.config({ path: "./config.env" });
+
 
 app.post(
   "/api/webhook",

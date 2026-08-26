@@ -9,6 +9,30 @@ const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+
+const createToken = (id,role,user,req,res,message)=>{
+const token = jwt.sign({id,role},process.env.JWT_SECRET,{expiresIn:process.env.JWT_EXPIRES_IN});
+
+const cookiesOptions = {
+   expiresIn: 5 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax',
+}
+ res.cookie('jwt',token,cookiesOptions);
+
+ user.password = undefined
+     res.status(200).json({
+        status:'Success',
+        message,
+        data:{
+           token,
+            user
+        }
+    })
+}
+
+
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
   let { userName, email, password, repeatPassword } = req.body;
@@ -46,23 +70,8 @@ let login = asyncHandler(async (req, res, next) => {
 
   const workerId = workerDetails ? workerDetails._id : "";
 
-  let token = jwt.sign(
-    {
-      name: user.userName,
-      id: user._id,
-      email: user.email,
-      role: userRole,
-      workerId,
-    },
-    process.env.SECRET,
-    {
-      expiresIn: "5d",
-    },
-  );
-  return res.status(200).json({
-    message: "Login successful",
-    token,
-  });
+  createToken(user._id,userRole,user,req,res,"Login successful")
+
 });
 
 // login with google
@@ -113,20 +122,14 @@ let googleLogin = asyncHandler(async (req, res, next) => {
 
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
+ 
 
-  let token = jwt.sign(
-    { name: user.userName, id: user._id, email: user.email, role: userRole },
-    process.env.SECRET,
-    {
-      expiresIn: "5d",
-    },
-  );
+  createToken(user._id,userRole,user,req,res,"Login successful")
 
-  return res.status(200).json({
-    message: "Login successful",
-    token,
-  });
+
 });
+
+
 
 // forget Password
 let forgetPassword = asyncHandler(async (req, res, next) => {
@@ -232,19 +235,8 @@ let resetPassword = asyncHandler(async (req, res, next) => {
   await user.save();
   const workerDetails = await WorkerModel.findOne({ user: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
-  let token = jwt.sign(
-    { name: user.userName, id: user._id, email: user.email, role: userRole },
-    process.env.SECRET,
-    {
-      expiresIn: "5d",
-    },
-  );
+    createToken(user._id,userRole,user,req,res,"Password updated successfully")
 
-  return res.status(200).json({
-    status: "Success",
-    message: "Password updated successfully",
-    token,
-  });
 });
 
 // update password
@@ -272,17 +264,7 @@ let updatePassword = asyncHandler(async (req, res, next) => {
   const workerDetails = await WorkerModel.findOne({ user: user._id });
   const userRole = workerDetails ? workerDetails.role : "customer";
 
-  let token = jwt.sign(
-    { name: user.userName, id: user._id, email: user.email, role: userRole },
-    process.env.SECRET,
-    {
-      expiresIn: "5d",
-    },
-  );
-  return res.status(200).json({
-    message: "password updated successfully",
-    token,
-  });
+   createToken(user._id,userRole,user,req,res,"Password updated successfully")
 });
 
 // get all users
