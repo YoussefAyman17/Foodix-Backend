@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.get("/", auth, restrictTo("Admin"), getAllOrders);
 
-router.get("/myorders", auth, restrictTo("User"), getUserOrders);
+router.get("/myorders", auth, getUserOrders);
 
 router.get(
   "/delivery-orders",

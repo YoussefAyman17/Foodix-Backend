@@ -42,7 +42,7 @@ let login = asyncHandler(async (req, res, next) => {
   }
 
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
-  const userRole = workerDetails ? workerDetails.role : "customer";
+  const userRole = workerDetails ? workerDetails.role : "User";
 
   const workerId = workerDetails ? workerDetails._id : "";
 

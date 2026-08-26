@@ -3,13 +3,32 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
+const dotenv = require("dotenv");
+const path = require("path");
+
+const orderRouter = require("./routes/orderRoutes");
+const workerRouter = require("./routes/workerRoutes");
+const userRouter = require("./routes/userRoutes");
+const complaintRouter = require("./routes/complaintRoutes");
+const categoryRouter = require("./routes/categoryRoutes");
+const mealRouter = require("./routes/mealRoutes");
 const { handleDeliverySockets } = require("./sockets/SocketController");
 const { stripeWebhook } = require("./controllers/orderControllers");
-const app = new express();
-const dotenv = require("dotenv");
+const errorHandler = require("./controllers/errorControllers");
 
-dotenv.config();
+const app = express();
 const server = http.createServer(app);
+
+mongoose
+  .connect(process.env.DATABASE)
+  .then(() => {
+    console.log("Connected to database successfully");
+  })
+  .catch((err) => {
+    console.log("error:", err.message);
+  });
+
+dotenv.config({ path: "./config.env" });
 
 app.post(
   "/api/webhook",
@@ -17,36 +36,16 @@ app.post(
   stripeWebhook,
 );
 
-const errorHandler = require("./controllers/errorControllers");
-
-mongoose
-  .connect(
-    "mongodb+srv://youssefayman8585_db_user:Ej62hK87nvNsyatE@cluster0.j2kq5ls.mongodb.net/",
-  )
-  .then(() => {
-    console.log("Connected to database successfully");
-  })
-  .catch((err) => {
-    console.log("error:", err.message);
-  });
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 
-let OrderRouter = require("./routes/orderRoutes");
-let WorkerRouter = require("./routes/workerRoutes");
-
-let UserRouter = require("./routes/userRoutes");
-let ComplaintRouter = require("./routes/complaintRoutes");
-
-let CategoryRouter = require("./routes/categoryRoutes");
-let MealRouter = require("./routes/mealRoutes");
-
-app.use("/api/orders", OrderRouter);
-app.use("/api/workers", WorkerRouter);
-app.use("/api/users", UserRouter);
-app.use("/api/complaints", ComplaintRouter);
-app.use("/api/categories", CategoryRouter);
-app.use("/api/meals", MealRouter);
+app.use("/api/v1/orders", orderRouter);
+app.use("/api/v1/workers", workerRouter);
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/complaints", complaintRouter);
+app.use("/api/v1/categories", categoryRouter);
+app.use("/api/v1/meals", mealRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: req.url + "not found" });
@@ -63,6 +62,28 @@ app.set("socketio", io);
 
 handleDeliverySockets(io);
 
-server.listen(3000, () => {
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
   console.log("Server is running on port 3000");
+});
+
+process.on("uncaughtException", (err) => {
+  console.log("UNCAUGHT EXCEPTION! 💥 Shutting down...");
+  console.log(err.name, err.message);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.log("UNHANDLED REJECTION! 💥 Shutting down...");
+  console.log(err.name, err.message);
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+process.on("SIGTERM", () => {
+  console.log("👋 SIGTERM RECEIVED. Shutting down gracefully");
+  server.close(() => {
+    console.log("💥 Process terminated!");
+  });
 });

@@ -57,6 +57,5 @@ const restrictTo = (...roles) => {
     next();
   };
 };
-// const restrictTo=(...roles)=>{};
 
 module.exports = { auth, optionalAuth, restrictTo };
