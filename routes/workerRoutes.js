@@ -5,6 +5,7 @@ const {
   getOnlineDelivery,
   addNewWorker,
   updateWorkerData,
+  deleteWorker,
 } = require("../controllers/workerControllers");
 
 const { auth, restrictTo } = require("../middleWares/auth");
@@ -17,5 +18,5 @@ router.get("/delivery", restrictTo("Admin", "Cashier"), getOnlineDelivery);
 router.post("/", restrictTo("Admin"), addNewWorker);
 
 router.patch("/:id", updateWorkerData);
-
+router.delete("/:id", restrictTo("Admin"), deleteWorker);
 module.exports = router;

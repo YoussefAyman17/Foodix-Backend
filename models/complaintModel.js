@@ -50,7 +50,7 @@ const ComplaintSchema = new mongoose.Schema(
     status: {
       type: String,
       trim: true,
-      enum: ["pending", "in process", "resolved"],
+      enum: ["pending", "in process", "resolved","rejected"],
       default: "pending",
     },
     adminResponse: {
