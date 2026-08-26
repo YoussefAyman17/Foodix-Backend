@@ -14,7 +14,7 @@ const createToken = (id,role,user,req,res,message)=>{
 const token = jwt.sign({id,role},process.env.JWT_SECRET,{expiresIn:process.env.JWT_EXPIRES_IN});
 
 const cookiesOptions = {
-   expiresIn: 5 * 24 * 60 * 60 * 1000,
+    expires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: false,
     sameSite: 'lax',
