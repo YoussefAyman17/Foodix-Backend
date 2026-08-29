@@ -11,31 +11,31 @@ const {
 const { auth, restrictTo } = require("../middleWares/auth");
 const router = express.Router();
 
-router.get("/", auth, restrictTo("Admin"), getAllOrders);
+router.use(auth);
+router.get("/", restrictTo("Admin"), getAllOrders);
+router.post("/", checkout);
 
-router.get("/myorders", auth, getUserOrders);
+router.get("/myorders", getUserOrders);
 
 router.get(
   "/delivery-orders",
-  auth,
+
   restrictTo("Delivery", "Admin"),
   getDeliveryOrders,
 );
 
-router.get("/:id", auth, trackOrder);
-
-router.post("/", auth, checkout);
+router.get("/:id", trackOrder);
 
 router.patch(
   "/:id/status",
-  auth,
+
   restrictTo("Admin", "Delivery"),
   updateOrderStatus,
 );
 
 router.patch(
   "/:id/assign",
-  auth,
+
   restrictTo("Admin"),
   assignOrderToDeliveryPerson,
 );

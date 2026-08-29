@@ -17,10 +17,9 @@ router.get("/", getAllCategories);
 
 router.get("/:id", getCategoryById);
 
-router.post("/", auth, restrictTo("Admin"), createCategory);
+router.use(auth, restrictTo("Admin"));
 
-router.patch("/:id", auth, restrictTo("Admin"), updateCategory);
-
-router.delete("/:id", auth, restrictTo("Admin"), deleteCategory);
+router.post("/", createCategory);
+router.route("/:id").patch(updateCategory).delete(deleteCategory);
 
 module.exports = router;

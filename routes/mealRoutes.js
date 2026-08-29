@@ -14,10 +14,10 @@ router.get("/", getAllItems);
 
 router.get("/:id", getItemById);
 
-router.post("/", auth, restrictTo("Admin"), createItem);
+router.use(auth, restrictTo("Admin"));
 
-router.patch("/:id", auth, restrictTo("Admin"), updateItem);
+router.post("/", createItem);
+router.route("/:id").patch(updateItem).delete(deleteItem);
 
-router.delete("/:id", auth, restrictTo("Admin"), deleteItem);
 
 module.exports = router;

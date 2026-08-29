@@ -15,31 +15,31 @@ let {
   resetPassword,
   getMe,
   updateMe,
-  googleLogin
+  googleLogin,
 } = require("../controllers/userControllers");
 let { auth, restrictTo } = require("../middleWares/auth");
 
 router.post("/signUp", signUP);
 router.post("/login", login);
 
-router.post("/google",googleLogin)
+router.post("/google", googleLogin);
 router.post("/forgetPassword", forgetPassword);
 router.post("/verifyResetCode", verifyResetCode);
 router.put("/resetPassword", resetPassword);
 
-router.patch("/updatePassword", auth, updatePassword);
+router.use(auth);
 
-router.get("/me", auth, getMe);
-router.patch("/updateMe", auth, updateMe);
+router.patch("/updatePassword", updatePassword);
+router.get("/me", getMe, getUserById);
+router.patch("/updateMe", updateMe);
 
-// restrictTo('Admin')
-router.get("/", auth, restrictTo("Admin"), getAllUsers);
+router.use(restrictTo("Admin"));
 
-router.get("/:id", auth, restrictTo("Admin"), getUserById);
-
-router.patch("/:id", auth, restrictTo("Admin"), editUserById);
-
-//  restrictTo('Admin')
-router.delete("/:id", auth, restrictTo("Admin"), deleteUserById);
+router.get("/", getAllUsers);
+router
+  .route("/:id")
+  .get(getUserById)
+  .patch(editUserById)
+  .delete(deleteUserById);
 
 module.exports = router;

@@ -13,13 +13,16 @@ let {
 } = require("../controllers/complaintControllers");
 
 router.post("/", optionalAuth, createComplaint);
-router.get("/my-complaints", auth, getMyComplaints);
 
-router.get("/:id", auth, getComplaintById);
-router.patch("/:id", auth, editComplaint);
+router.use(auth);
 
-router.get("/", auth, restrictTo("Admin"), getAllComplaint);
-router.delete("/:id", auth, restrictTo("Admin"), deleteComplaint);
-router.patch("/:id/status", auth, restrictTo("Admin"), changeStatus);
+router.get("/my-complaints", getMyComplaints);
+router.route("/:id").get(getComplaintById).patch(editComplaint);
+
+router.use(restrictTo("Admin"));
+
+router.get("/", getAllComplaint);
+router.delete("/:id", deleteComplaint);
+router.patch("/:id/status", changeStatus);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const userModel = require("../models/userModel");
 const WorkerModel = require("../models/workerModel");
 const asyncHandler = require("../utils/asyncErrorHandler");
-const customError = require("../utils/customError");
+const CustomError = require("../utils/customError");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
@@ -9,39 +9,39 @@ const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const createToken = (id, role, user, req, res, message) => {
+  const token = jwt.sign({ id, role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
 
-const createToken = (id,role,user,req,res,message)=>{
-const token = jwt.sign({id,role},process.env.JWT_SECRET,{expiresIn:process.env.JWT_EXPIRES_IN});
-
-const cookiesOptions = {
+  const cookiesOptions = {
     expires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: false,
-    sameSite: 'lax',
-}
- res.cookie('jwt',token,cookiesOptions);
+    sameSite: "lax",
+  };
+  res.cookie("jwt", token, cookiesOptions);
 
- user.password = undefined
-     res.status(200).json({
-        status:'Success',
-        message,
-        data:{
-           token,
-            user
-        }
-    })
-}
-
+  user.password = undefined;
+  res.status(200).json({
+    status: "success",
+    message,
+    data: {
+      token,
+      user,
+    },
+  });
+};
 
 // create user
 let signUP = asyncHandler(async (req, res, next) => {
   let { userName, email, password, repeatPassword } = req.body;
   const existingUser = await userModel.findOne({ email });
   if (existingUser) {
-    return next(new customError("This email is already exists!", 400));
+    return next(new CustomError("This email is already exists!", 400));
   }
   if (password !== repeatPassword) {
-    return next(new customError("Passwords do not match", 400));
+    return next(new CustomError("Passwords do not match", 400));
   }
   let user = await userModel.create({ userName, email, password });
   res.status(200).json({ message: "User Created", Data: user });
@@ -52,26 +52,25 @@ let login = asyncHandler(async (req, res, next) => {
   let { email, password } = req.body;
 
   if (!email || !password) {
-    return next(new customError("You Must Provide Email or Password", 400));
+    return next(new CustomError("You Must Provide Email or Password", 400));
   }
 
   let user = await userModel.findOne({ email });
   if (!user) {
-    return next(new customError("User Not Found , Create account", 404));
+    return next(new CustomError("User Not Found , Create account", 404));
   }
 
   let valid = await bcrypt.compare(password, user.password);
   if (!valid) {
-    return next(new customError("Invalid Email Or Password", 401));
+    return next(new CustomError("Invalid Email Or Password", 401));
   }
 
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
-  const userRole = workerDetails ? workerDetails.role : "User";
+  const userRole = workerDetails ? workerDetails.role : "Customer";
 
-  const workerId = workerDetails ? workerDetails._id : "";
+  // const workerId = workerDetails ? workerDetails._id : "";
 
-  createToken(user._id,userRole,user,req,res,"Login successful")
-
+  createToken(user._id, userRole, user, req, res, "Login successful");
 });
 
 // login with google
@@ -80,7 +79,7 @@ let googleLogin = asyncHandler(async (req, res, next) => {
   const { idToken } = req.body;
 
   if (!idToken) {
-    return next(new customError("Google Token is required", 400));
+    return next(new CustomError("Google Token is required", 400));
   }
 
   let ticket;
@@ -90,7 +89,7 @@ let googleLogin = asyncHandler(async (req, res, next) => {
       audience: process.env.GOOGLE_CLIENT_ID,
     });
   } catch (err) {
-    return next(new customError("Invalid Google Token", 401));
+    return next(new CustomError("Invalid Google Token", 401));
   }
 
   const payload = ticket.getPayload();
@@ -121,22 +120,17 @@ let googleLogin = asyncHandler(async (req, res, next) => {
   }
 
   const workerDetails = await WorkerModel.findOne({ userId: user._id });
-  const userRole = workerDetails ? workerDetails.role : "customer";
- 
+  const userRole = workerDetails ? workerDetails.role : "Customer";
 
-  createToken(user._id,userRole,user,req,res,"Login successful")
-
-
+  createToken(user._id, userRole, user, req, res, "Login successful");
 });
-
-
 
 // forget Password
 let forgetPassword = asyncHandler(async (req, res, next) => {
   let { email } = req.body;
   let user = await userModel.findOne({ email });
   if (!user) {
-    return next(new customError("This email does not exist", 404));
+    return next(new CustomError("This email does not exist", 404));
   }
 
   let resetCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -177,7 +171,7 @@ let forgetPassword = asyncHandler(async (req, res, next) => {
         passwordResetVerified: undefined,
       },
     );
-    return next(new customError("There is an error in sending email", 500));
+    return next(new CustomError("There is an error in sending email", 500));
   }
 
   res.status(200).json({ message: "Reset Code Send To Email" });
@@ -198,7 +192,7 @@ let verifyResetCode = asyncHandler(async (req, res, next) => {
   });
 
   if (!user) {
-    return next(new customError("Reset Code Invalid Or Expired", 400));
+    return next(new CustomError("Reset Code Invalid Or Expired", 400));
   }
 
   await userModel.updateOne(
@@ -219,11 +213,11 @@ let resetPassword = asyncHandler(async (req, res, next) => {
 
   let user = await userModel.findOne({ email });
   if (!user) {
-    return next(new customError("User Not Found", 404));
+    return next(new CustomError("User Not Found", 404));
   }
 
   if (user.passwordResetVerified !== true) {
-    return next(new customError("Reset Code Not Verified", 400));
+    return next(new CustomError("Reset Code Not Verified", 400));
   }
 
   user.password = newPassword;
@@ -234,9 +228,15 @@ let resetPassword = asyncHandler(async (req, res, next) => {
 
   await user.save();
   const workerDetails = await WorkerModel.findOne({ user: user._id });
-  const userRole = workerDetails ? workerDetails.role : "customer";
-    createToken(user._id,userRole,user,req,res,"Password updated successfully")
-
+  const userRole = workerDetails ? workerDetails.role : "Customer";
+  createToken(
+    user._id,
+    userRole,
+    user,
+    req,
+    res,
+    "Password updated successfully",
+  );
 });
 
 // update password
@@ -244,7 +244,7 @@ let updatePassword = asyncHandler(async (req, res, next) => {
   let { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
     return next(
-      new customError("You Must Provide Current And New Password", 400),
+      new CustomError("You Must Provide Current And New Password", 400),
     );
   }
   user = await userModel.findById(req.user.id);
@@ -252,25 +252,32 @@ let updatePassword = asyncHandler(async (req, res, next) => {
   let valid = await bcrypt.compare(currentPassword, user.password);
 
   if (!valid) {
-    return next(new customError("Invalid Current Password", 401));
+    return next(new CustomError("Invalid Current Password", 401));
   }
   let IssamePassword = await bcrypt.compare(newPassword, user.password);
   if (IssamePassword) {
-    return next(new customError("New Password Must Be Different", 400));
+    return next(new CustomError("New Password Must Be Different", 400));
   }
   user.password = newPassword;
   await user.save();
 
   const workerDetails = await WorkerModel.findOne({ user: user._id });
-  const userRole = workerDetails ? workerDetails.role : "customer";
+  const userRole = workerDetails ? workerDetails.role : "Customer";
 
-   createToken(user._id,userRole,user,req,res,"Password updated successfully")
+  createToken(
+    user._id,
+    userRole,
+    user,
+    req,
+    res,
+    "Password updated successfully",
+  );
 });
 
 // get all users
 let getAllUsers = asyncHandler(async (req, res, next) => {
   let users = await userModel.find();
-  res.json(users);
+  res.status(200).json({ status: "success", data: users });
 });
 
 // get user by id
@@ -279,9 +286,9 @@ let getUserById = asyncHandler(async (req, res, next) => {
   let user = await userModel.findById(id);
 
   if (user) {
-    res.status(200).json({ Data: user });
+    res.status(200).json({ status: "success", data: user });
   } else {
-    next(new customError("User Not Found", 404));
+    next(new CustomError("User Not Found", 404));
   }
 });
 
@@ -292,7 +299,7 @@ let editUserById = asyncHandler(async (req, res, next) => {
   if (user) {
     res.status(200).json({ message: "User Updated Succesfully", Data: user });
   } else {
-    next(new customError("User Not Found", 404));
+    next(new CustomError("User Not Found", 404));
   }
 });
 
@@ -301,11 +308,9 @@ let deleteUserById = asyncHandler(async (req, res, next) => {
   let { id } = req.params;
   let user = await userModel.findByIdAndDelete(id);
   if (user) {
-    res
-      .status(200)
-      .json({ message: "User deleted Succesfully", DeletedId: id });
+    res.status(204).json({ status: "success", data: user });
   } else {
-    next(new customError("User Not Found", 404));
+    next(new CustomError("User Not Found", 404));
   }
 });
 
@@ -317,22 +322,9 @@ const filterObj = (obj, ...allowedFields) => {
   return newObj;
 };
 
-const getMe = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const currentUser = await userModel.findById(userId);
-
-    if (!currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({
-      user: currentUser,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+const getMe = (req, res, next) => {
+  req.params.id = req.user.id;
+  next();
 };
 
 const updateMe = async (req, res) => {
