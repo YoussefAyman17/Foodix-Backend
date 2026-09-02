@@ -1,49 +1,83 @@
 const Meal = require("../models/mealModel");
 const Category = require("../models/categoryModel");
+const CustomError = require("../utils/customError");
+const asyncHandler = require("../utils/asyncErrorHandler");
 const slugify = require("slugify");
 const mongoose = require("mongoose");
+const multer = require("multer");
+const sharp = require("sharp");
+const cloudinary = require("cloudinary").v2;
 
-const createItem = async (req, res) => {
-  try {
-    if (req.body.itemId) delete req.body.itemId;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-    const categoryId = req.body.category;
-
-    if (!categoryId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Category field is required in the body",
-        });
-    }
-
-    const categoryExists = await Category.findById(categoryId);
-
-    if (!categoryExists) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found in database" });
-    }
-
-    const meal = await Meal.create(req.body);
-
-    res
-      .status(201)
-      .json({ success: true, message: "Create Meal success", data: meal });
-  } catch (error) {
-    if (error.code === 11000) {
-      const duplicatedField = Object.keys(error.keyValue)[0];
-      const duplicatedValue = error.keyValue[duplicatedField];
-
-      return res.status(400).json({
-        success: false,
-        message: `Duplicate Error in field: ${duplicatedField}. Value: ${duplicatedValue}`,
-      });
-    }
-    res.status(400).json({ success: false, message: error.message });
+const multerStorage = multer.memoryStorage();
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new CustomError("Not an image! Please upload only images.", 400), false);
   }
 };
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+exports.uploadMealPhoto = upload.single("photo");
+
+exports.resizeMealPhoto = asyncHandler(async (req, res, next) => {
+  if (!req.file) return next();
+  const imageBuffer = await sharp(req.file.buffer)
+    .resize(800, 800, {
+      fit: "cover",
+      position: "center",
+      withoutEnlargement: true,
+    })
+    .toFormat("webp", { quality: 82 })
+    .toBuffer();
+
+  const uploadResult = await new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "foodix/meals",
+        format: "webp",
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      },
+    );
+
+    uploadStream.end(imageBuffer);
+  });
+
+  req.body.img = uploadResult.secure_url;
+  req.body.imgCloudinaryId = uploadResult.public_id;
+  next();
+});
+
+const createItem = asyncHandler(async (req, res, next) => {
+  const categoryExists = await Category.findById(req.body.category);
+  if (!categoryExists) {
+    return next(
+      new CustomError(
+        "No category found with that ID. Meal creation failed.",
+        404,
+      ),
+    );
+  }
+  const meal = await Meal.create(req.body);
+  await meal.populate({
+    path: "category",
+    select: "name slug",
+  });
+  res.status(201).json({ status: "success", data: meal });
+});
 
 const getAllItems = async (req, res) => {
   try {
@@ -101,51 +135,23 @@ const getItemById = async (req, res) => {
   }
 };
 
-const updateItem = async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Meal ID format, must be a number",
-      });
-    }
-    if (req.body.itemId) delete req.body.itemId;
-
-    if (req.body.category) {
-      const category = await Category.findById(req.body.category);
-      if (!category) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Category not found" });
-      }
-    }
-    const meal = await Meal.findOneAndUpdate({ itemId: id }, req.body, {
-      returnDocument: "after",
-      runValidators: true,
-    }).populate("category", "name slug");
-
-    if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Meal not found" });
-    }
-    res.status(200).json({
-      success: true,
-      message: "Meal updated successfully",
-      data: meal,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Meal name already exists in this category",
-      });
-    }
-    res.status(400).json({ success: false, message: error.message });
+const updateItem = asyncHandler(async (req, res, next) => {
+  const meal = await Meal.findById(req.params.id);
+  if (!meal) {
+    return next(new CustomError("Meal not found", 404));
   }
-};
+
+  if (req.body.img && meal.imgCloudinaryId) {
+    await cloudinary.uploader.destroy(meal.imgCloudinaryId);
+  }
+
+  const updatedMeal = await Meal.findByIdAndUpdate(req.params.id, req.body, {
+    returnDocument: "after",
+    runValidators: true,
+  }).populate("category", "name slug");
+
+  res.status(200).json({ status: "success", data: updatedMeal });
+});
 
 const deleteItem = async (req, res) => {
   try {

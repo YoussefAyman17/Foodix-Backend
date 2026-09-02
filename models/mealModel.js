@@ -4,13 +4,13 @@ const autoIncrement = require("../utils/autoIncrement");
 
 const mealSchema = new mongoose.Schema(
   {
-    itemId: {
-      type: Number,
-      unique: true,
-      index: true,
-    },
+    // itemId: {
+    //   type: Number,
+    //   unique: true,
+    //   index: true,
+    // },
     category: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.ObjectId,
       ref: "Category",
       required: [true, "Category is required"],
       index: true,
@@ -65,6 +65,10 @@ const mealSchema = new mongoose.Schema(
       type: String,
       maxLength: 255,
       default: "",
+    },
+    imgCloudinaryId: {
+      type: String,
+      maxLength: 255,
     },
     isAvailable: {
       type: Boolean,
@@ -125,9 +129,9 @@ mealSchema.pre("findOneAndUpdate", function () {
   }
 });
 
-autoIncrement(mealSchema, {
-  id: "item_counter",
-  inc_field: "itemId",
-});
+// autoIncrement(mealSchema, {
+//   id: "item_counter",
+//   inc_field: "itemId",
+// });
 
 module.exports = mongoose.models.Meal || mongoose.model("Meal", mealSchema);
