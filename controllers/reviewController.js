@@ -1,11 +1,13 @@
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
+const ApiFeatures = require('../Utils/apiFeatures')
+const CustomError = require("../utils/customError");
 const Review = require('../models/reviewModel');
 
 
 exports.createReview = asyncErrorHandler(async (req,res,next)=>{
   if (!req.body.meal) req.body.meal = req.params.mealId;
   if (!req.body.user) req.body.user = req.user.id;
-const review = await Model.create(req.body);
+const review = await Review.create(req.body);
    res.status(201).json({
       status: 'success',
       data: {
@@ -18,12 +20,16 @@ const review = await Model.create(req.body);
  
     let filter = {};
     if (req.params.mealId) filter = { meal: req.params.mealId };
-
-  const reviews = await Model.find(filter);
+     const features = new ApiFeatures(Review.find(filter), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+     const reviews = await features.mongooseQuery;
   
     res.status(200).json({
       status: 'success',
-      results: review.length,
+      results: reviews.length,
       data: {
         data: reviews
       }
@@ -36,7 +42,7 @@ const review = await Model.create(req.body);
  
 
     if (!review) {
-      return next(new AppError('No review found with that ID', 404));
+      return next(new CustomError('No review found with that ID', 404));
     }
 
     res.status(200).json({
@@ -54,7 +60,7 @@ const review = await Model.create(req.body);
     });
 
     if (!review) {
-      return next(new AppError('No review found with that ID', 404));
+      return next(new CustomError('No review found with that ID', 404));
     }
 
     res.status(200).json({
@@ -70,7 +76,7 @@ const review = await Model.create(req.body);
     const review = await Review.findByIdAndDelete(req.params.id);
 
     if (!review) {
-      return next(new AppError('No review found with that ID', 404));
+      return next(new CustomError('No review found with that ID', 404));
     }
 
     res.status(204).json({

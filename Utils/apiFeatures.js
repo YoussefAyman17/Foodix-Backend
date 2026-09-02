@@ -1,4 +1,4 @@
-export default class ApiFeatures {
+class ApiFeatures {
   constructor(mongooseQuery, queryString) {
     this.mongooseQuery = mongooseQuery;
     this.queryString = queryString;
@@ -82,3 +82,4 @@ export default class ApiFeatures {
     return this;
   }
 }
+ module.exports = ApiFeatures;

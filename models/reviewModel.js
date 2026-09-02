@@ -3,16 +3,13 @@ const Meal = require('../models/mealModel');
 const reviewSchema = new mongoose.Schema({
 comment:{
     type:String,
-    required:['true','Review can not be empty!']
+    required:[true,'Comment can not be empty!']
 },
-rating:{
-    type:Number,
-    min:1,
-    max:5
-},
-createdAt:{
-    type:Date,
-    default:Date.now
+rating: {
+  type: Number,
+  required: [true, 'Rating is required'],
+  min: [1, 'Rating must be at least 1'],
+  max: [5, 'Rating cannot be more than 5']
 },
 user:{
     type:mongoose.Schema.ObjectId,
@@ -24,17 +21,16 @@ meal:{
     ref:'Meal',
     required: [true, 'Review must belong to a meal.']
 }
-})
+},{ timestamps: true },)
 
 
 reviewSchema.index({ meal: 1, user: 1 }, { unique: true });
 
-reviewSchema.pre(/^find/,function(next){
+reviewSchema.pre(/^find/,function(){
     this.populate({
         path:'user',
         select:'userName profilePic'
     })
-    next();
 })
 
 
@@ -71,9 +67,8 @@ reviewSchema.post('save', function() {
 });
 
 // delete and update 
-reviewSchema.pre(/^findOneAnd/, async function(next) {
-  this.r = await this.findOne();
-  next();
+reviewSchema.pre(/^findOneAnd/, async function() {
+this.r = await this.model.findOne(this.getQuery());
 });
 
 reviewSchema.post(/^findOneAnd/, async function() {
