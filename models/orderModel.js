@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.ObjectId,
       ref: "User",
       required: [true, "Order must belong to a user"],
       index: true,
@@ -18,7 +18,7 @@ const orderSchema = new mongoose.Schema(
     orderItems: [
       {
         foodItem: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: mongoose.Schema.ObjectId,
           ref: "Meal",
           required: true,
         },
@@ -59,7 +59,7 @@ const orderSchema = new mongoose.Schema(
     },
 
     deliveryPerson: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.ObjectId,
       ref: "Worker",
       default: null,
     },

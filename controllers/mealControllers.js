@@ -3,8 +3,6 @@ const Category = require("../models/categoryModel");
 const CustomError = require("../utils/customError");
 const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("../utils/asyncErrorHandler");
-const slugify = require("slugify");
-const mongoose = require("mongoose");
 const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("cloudinary").v2;
@@ -29,9 +27,9 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-const uploadMealPhoto = upload.single("photo");
+exports.uploadMealPhoto = upload.single("photo");
 
-const resizeMealPhoto = asyncHandler(async (req, res, next) => {
+exports.resizeMealPhoto = asyncHandler(async (req, res, next) => {
   if (!req.file) return next();
   const imageBuffer = await sharp(req.file.buffer)
     .resize(800, 800, {
@@ -62,7 +60,7 @@ const resizeMealPhoto = asyncHandler(async (req, res, next) => {
   next();
 });
 
-const createItem = asyncHandler(async (req, res, next) => {
+exports.createItem = asyncHandler(async (req, res, next) => {
   const categoryExists = await Category.findById(req.body.category);
   if (!categoryExists) {
     return next(
@@ -80,7 +78,7 @@ const createItem = asyncHandler(async (req, res, next) => {
   res.status(201).json({ status: "success", data: meal });
 });
 
-const getAllItems = asyncHandler(async (req, res, next) => {
+exports.getAllItems = asyncHandler(async (req, res, next) => {
   let filterObj = {};
   if (req.query.categorySlug) {
     const category = await Category.findOne({ slug: req.query.categorySlug });
@@ -112,41 +110,29 @@ const getAllItems = asyncHandler(async (req, res, next) => {
   });
 });
 
-const getItemById = async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Meal ID format, must be a number",
-      });
-    }
-    const meal = await Meal.findOne({ itemId: id }).populate(
-      "category",
-      "name slug categoryId",
-    );
-    if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Meal not found" });
-    }
-    res
-      .status(200)
-      .json({ success: true, message: "Get Meal By Id success", data: meal });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+exports.getItemById = asyncHandler(async (req, res, next) => {
+  const meal = await Meal.findById(req.params.id).populate(
+    "category",
+    "name slug",
+  );
+  if (!meal) {
+    return next(new CustomError("Meal not found", 404));
   }
-};
+  res.status(200).json({ status: "success", data: meal });
+});
 
-const updateItem = asyncHandler(async (req, res, next) => {
+exports.updateItem = asyncHandler(async (req, res, next) => {
   const meal = await Meal.findById(req.params.id);
   if (!meal) {
     return next(new CustomError("Meal not found", 404));
   }
 
   if (req.body.img && meal.imgCloudinaryId) {
-    await cloudinary.uploader.destroy(meal.imgCloudinaryId);
+    try {
+      await cloudinary.uploader.destroy(meal.imgCloudinaryId);
+    } catch (error) {
+      console.error("Failed to delete image from Cloudinary:", error);
+    }
   }
 
   const updatedMeal = await Meal.findByIdAndUpdate(req.params.id, req.body, {
@@ -157,38 +143,19 @@ const updateItem = asyncHandler(async (req, res, next) => {
   res.status(200).json({ status: "success", data: updatedMeal });
 });
 
-const deleteItem = async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Meal ID format, must be a number",
-      });
-    }
-
-    const meal = await Meal.findOneAndDelete({ itemId: id });
-    if (!meal) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Meal not found" });
-    }
-    res
-      .status(200)
-      .json({ success: true, message: "Meal deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+exports.deleteItem = asyncHandler(async (req, res) => {
+  const meal = await Meal.findOneAndDelete(req.params.id);
+  if (!meal) {
+    return next(new CustomError("Meal not found", 404));
   }
-};
 
-module.exports = {
-  getAllItems,
-  getItemById,
-  createItem,
-  updateItem,
-  deleteItem,
-  resizeMealPhoto,
-  uploadMealPhoto
+  if (meal.imgCloudinaryId) {
+    try {
+      await cloudinary.uploader.destroy(meal.imgCloudinaryId);
+    } catch (error) {
+      console.error("Failed to delete image from Cloudinary:", error);
+    }
+  }
 
-};
+  res.status(204).json({ status: "success", data: null });
+});
