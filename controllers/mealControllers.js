@@ -1,6 +1,7 @@
 const Meal = require("../models/mealModel");
 const Category = require("../models/categoryModel");
 const CustomError = require("../utils/customError");
+const ApiFeatures = require("../utils/apiFeatures");
 const asyncHandler = require("../utils/asyncErrorHandler");
 const slugify = require("slugify");
 const mongoose = require("mongoose");
@@ -79,34 +80,37 @@ const createItem = asyncHandler(async (req, res, next) => {
   res.status(201).json({ status: "success", data: meal });
 });
 
-const getAllItems = async (req, res) => {
-  try {
-    let filter = {};
-
-    if (req.params.slug) {
-      const category = await Category.findOne({ slug: req.params.slug });
-
-      if (!category) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Category not found" });
-      }
-
-      filter = { category: category._id };
+const getAllItems = asyncHandler(async (req, res, next) => {
+  let filterObj = {};
+  if (req.query.categorySlug) {
+    const category = await Category.findOne({ slug: req.query.categorySlug });
+    if (!category) {
+      return next(new CustomError("No category found with that slug.", 404));
     }
-
-    const meals = await Meal.find(filter).populate("category");
-
-    res.status(200).json({
-      success: true,
-      message: "Get All Meals success",
-      count: meals.length,
-      data: meals,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    filterObj.category = category._id;
   }
-};
+
+  const documentsCount = await Meal.countDocuments(filterObj);
+
+  const features = new ApiFeatures(Meal.find(filterObj), req.query)
+    .filter()
+    .search("Meals")
+    .sort()
+    .limitFields()
+    .paginate(documentsCount);
+
+  const meals = await features.mongooseQuery.populate({
+    path: "category",
+    select: "name slug",
+  });
+
+  res.status(200).json({
+    status: "success",
+    results: meals.length,
+    pagination: features.paginationResult,
+    data: meals,
+  });
+});
 
 const getItemById = async (req, res) => {
   try {
