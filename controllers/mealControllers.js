@@ -28,9 +28,9 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-exports.uploadMealPhoto = upload.single("photo");
+const uploadMealPhoto = upload.single("photo");
 
-exports.resizeMealPhoto = asyncHandler(async (req, res, next) => {
+const resizeMealPhoto = asyncHandler(async (req, res, next) => {
   if (!req.file) return next();
   const imageBuffer = await sharp(req.file.buffer)
     .resize(800, 800, {
@@ -184,4 +184,7 @@ module.exports = {
   createItem,
   updateItem,
   deleteItem,
+  resizeMealPhoto,
+  uploadMealPhoto
+
 };
