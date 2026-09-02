@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
-
+const reviewRouter = require('../routes/reviewRoutes');
 const {
   getAllItems,
   getItemById,
@@ -11,6 +11,8 @@ const {
   resizeMealPhoto,
 } = require("../controllers/mealControllers");
 const { auth, restrictTo } = require("../middleWares/auth");
+
+router.use('/:mealId/reviews',reviewRouter)
 
 router.get("/", getAllItems);
 
