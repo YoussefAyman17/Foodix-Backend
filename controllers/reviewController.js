@@ -3,9 +3,22 @@ const ApiFeatures = require("../utils/apiFeatures");
 const CustomError = require("../utils/customError");
 const Review = require("../models/reviewModel");
 
+const Order = require("../models/orderModel");
+
 exports.createReview = asyncErrorHandler(async (req, res, next) => {
   if (!req.body.meal) req.body.meal = req.params.mealId;
   if (!req.body.user) req.body.user = req.user.id;
+
+  const order = await Order.findOne({
+    userId: req.user.id,
+    "orderItems.foodItem": req.params.mealId,
+    status: "Delivered",
+  });
+  if (!order)
+    return next(
+      new CustomError("You can only review a meal that you have ordered", 403),
+    );
+
   const review = await Review.create(req.body);
   res.status(201).json({
     status: "success",
