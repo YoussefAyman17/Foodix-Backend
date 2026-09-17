@@ -6,9 +6,27 @@ const handleCastErrorDB = (err) => {
   return error;
 };
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
+  let field = "field";
+  let value = "";
 
-  const message = `Duplicate field value: ${value}. Please use another value!`;
+  if (err.keyValue) {
+    field = Object.keys(err.keyValue)[0];
+    value = Object.values(err.keyValue)[0];
+  } else if (err.errmsg) {
+    const match = err.errmsg.match(/(["'])(\\?.)*?\1/);
+    value = match ? match[0].replace(/"/g, "") : "";
+  }
+
+  if (field === "email") {
+    return new CustomError(
+      "An account with this email address already exists. Please use another email or log in.",
+      400,
+    );
+  }
+
+  const formattedField = field.charAt(0).toUpperCase() + field.slice(1);
+  const message = `${formattedField} "${value}" is already taken. Please use another value!`;
+
   return new CustomError(message, 400);
 };
 const handleValidationErrorDB = (err) => {
@@ -53,13 +71,15 @@ module.exports = (error, req, res, next) => {
   if (process.env.NODE_ENV == "development") {
     sendErrorDev(error, req, res);
   } else if (process.env.NODE_ENV == "production") {
-    let err = {
-      ...error,
-      name: error.name,
-      code: error.code,
-      errmsg: error.errmsg,
-      errors: error.errors,
-    };
+    let err = Object.create(error);
+    err.message = error.message;
+    err.name = error.name;
+    err.code = error.code;
+    err.path = error.path;
+    err.value = error.value;
+    err.errmsg = error.errmsg;
+    err.keyValue = error.keyValue;
+    err.errors = error.errors;
     if (err.name === "CastError") {
       err = handleCastErrorDB(err);
     }

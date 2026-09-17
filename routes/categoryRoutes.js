@@ -6,6 +6,8 @@ let {
   getCategoryById,
   updateCategory,
   deleteCategory,
+  uploadCategoryPhoto,
+  resizeCategoryPhoto,
 } = require("../controllers/categoryControllers");
 const mealRoutes = require("./mealRoutes");
 
@@ -18,8 +20,10 @@ router.get("/", getAllCategories);
 router.get("/:id", getCategoryById);
 
 router.use(auth, restrictTo("Admin"));
-
-router.post("/", createCategory);
-router.route("/:id").patch(updateCategory).delete(deleteCategory);
+router.post("/", uploadCategoryPhoto, resizeCategoryPhoto, createCategory);
+router
+  .route("/:id")
+  .patch(uploadCategoryPhoto, resizeCategoryPhoto, updateCategory)
+  .delete(deleteCategory);
 
 module.exports = router;

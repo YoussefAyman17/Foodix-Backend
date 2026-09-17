@@ -41,17 +41,17 @@ const mealSchema = new mongoose.Schema(
       required: [true, "Price is required"],
       min: [0, "Price cannot be negative"],
     },
-ratingsAverage: {
-  type: Number,
-  min: [0, "Minimum rating is 0"],
-  max: [5, "Maximum rating is 5"],
-  default: 0,
-},
+    ratingsAverage: {
+      type: Number,
+      min: [0, "Minimum rating is 0"],
+      max: [5, "Maximum rating is 5"],
+      default: 0,
+    },
 
-ratingsQuantity: {
-  type: Number,
-  default: 0,
-  },
+    ratingsQuantity: {
+      type: Number,
+      default: 0,
+    },
     discount_tag: {
       type: String,
       default: null,
@@ -114,12 +114,11 @@ ratingsQuantity: {
 
 mealSchema.index({ name: 1, category: 1 }, { unique: true });
 
-mealSchema.virtual('reviews',{
-  ref:'Review',
-  foreignField:'meal',
-  localField:'_id'
-})
-
+mealSchema.virtual("reviews", {
+  ref: "Review",
+  foreignField: "meal",
+  localField: "_id",
+});
 
 mealSchema.pre("validate", function () {
   if (this.name) {
@@ -146,4 +145,4 @@ mealSchema.pre("findOneAndUpdate", function () {
 //   inc_field: "itemId",
 // });
 
-module.exports = mongoose.models.Meal || mongoose.model("Meal", mealSchema);
+module.exports = mongoose.model("Meal", mealSchema);

@@ -21,6 +21,10 @@ const categorySchema = new mongoose.Schema(
       type: String,
       maxLength: [255, "Image URL/path is too long, maximum is 255 characters"],
     },
+    imgCloudinaryId: {
+      type: String,
+      maxLength: 255,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -37,12 +41,15 @@ const categorySchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-categorySchema.pre(/^(updateOne|save|findOneAndUpdate)/, function (next) {
+categorySchema.pre("save", function (next) {
+  if (this.isModified("name")) {
+    this.slug = slugify(this.name, { lower: true, strict: true });
+  }
+});
+categorySchema.pre(/^(updateOne|findOneAndUpdate)/, function (next) {
   const update = this.getUpdate();
-
   if (update && update.name) {
     update.slug = slugify(update.name, { lower: true, strict: true });
   }
 });
-module.exports =
-  mongoose.models.Category || mongoose.model("Category", categorySchema);
+module.exports = mongoose.model("Category", categorySchema);

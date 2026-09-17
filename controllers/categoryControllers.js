@@ -1,142 +1,129 @@
 const Category = require("../models/categoryModel");
-const mongoose = require("mongoose");
-const slugify = require("slugify");
+const asyncHandler = require("../utils/asyncErrorHandler");
+const CustomError = require("../utils/customError");
+const multer = require("multer");
+const sharp = require("sharp");
+const cloudinary = require("../utils/cloudinary");
 
-const createCategory = async (req, res) => {
-  try {
-    if (req.body.categoryId) delete req.body.categoryId;
-    let category = await Category.create(req.body);
-    res.status(201).json({
-      success: true,
-      message: "Category created successfully",
-      data: category,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category name already exists" });
-    }
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        message: Object.values(error.errors)
-          .map((err) => err.message)
-          .join(", "),
-      });
-    }
-    res.status(400).json({ success: false, message: error.message });
+// console.log(cloudinary);
+const multerStorage = multer.memoryStorage();
+const multerFilter = (req, file, cb) => {
+  console.log("Uploaded file MIME type is:", file.mimetype);
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new CustomError("Not an image! Please upload only images.", 400), false);
   }
 };
-const getAllCategories = async (req, res) => {
-  try {
-    const categories = await Category.find();
-    if (!categories) {
-      return res.status(404).json({ success: false, message: "Not Found" });
-    }
-    res
-      .status(200)
-      .json({ success: true, count: categories.length, data: categories });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-const getCategoryById = async (req, res) => {
-  try {
-    const catId = Number(req.params.id);
-    if (isNaN(catId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid ID format, must be a number",
-      });
-    }
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
-    const category = await Category.findOne({ categoryId: catId });
+exports.uploadCategoryPhoto = upload.single("image");
 
-    if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found" });
-    }
+exports.resizeCategoryPhoto = asyncHandler(async (req, res, next) => {
+  if (!req.file) return next();
+  const imageBuffer = await sharp(req.file.buffer)
+    .resize(800, 800, {
+      fit: "cover",
+      position: "center",
+      withoutEnlargement: true,
+    })
+    .toFormat("webp", { quality: 82 })
+    .toBuffer();
 
-    res.status(200).json({ success: true, data: category });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-const updateCategory = async (req, res) => {
-  try {
-    const catId = Number(req.params.id);
-    if (isNaN(catId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid ID format, must be a number",
-      });
-    }
-
-    if (req.body.categoryId) delete req.body.categoryId;
-    if (req.body.name) {
-      req.body.slug = slugify(req.body.name, { lower: true, strict: true });
-    }
-    const category = await Category.findOneAndUpdate(
-      { categoryId: catId },
-      req.body,
+  const uploadResult = await new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
       {
-        returnDocument: "after",
-        runValidators: true,
+        folder: "foodix/categories",
+        format: "webp",
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
       },
     );
 
-    if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found" });
-    }
-    res.status(200).json({
-      message: "Category updated successfully",
-      success: true,
-      data: category,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category name already exists" });
-    }
-    res.status(400).json({ success: false, message: error.message });
+    uploadStream.end(imageBuffer);
+  });
+
+  req.body.image = uploadResult.secure_url;
+  req.body.imgCloudinaryId = uploadResult.public_id;
+  next();
+});
+
+exports.createCategory = asyncHandler(async (req, res) => {
+  const category = await Category.create(req.body);
+  res.status(201).json({
+    status: "success",
+    data: category,
+  });
+});
+
+exports.getAllCategories = asyncHandler(async (req, res) => {
+  const categories = await Category.find();
+  res
+    .status(200)
+    .json({ status: "success", count: categories.length, data: categories });
+});
+
+exports.getCategoryById = asyncHandler(async (req, res, next) => {
+  const category = await Category.findById(req.params.id);
+
+  if (!category) {
+    return next(new CustomError("Category not found", 404));
   }
-};
 
-const deleteCategory = async (req, res) => {
-  try {
-    const catId = Number(req.params.id);
-    if (isNaN(catId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid ID format, must be a number",
-      });
-    }
+  res.status(200).json({ status: "success", data: category });
+});
 
-    const category = await Category.findOneAndDelete({ categoryId: catId });
+exports.updateCategory = asyncHandler(async (req, res, next) => {
+  // if (req.body.name) {
+  //   req.body.slug = slugify(req.body.name, { lower: true, strict: true });
+  // }
+  const category = await Category.findById(req.params.id);
 
-    if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found" });
-    }
-
-    res
-      .status(200)
-      .json({ success: true, message: "Category deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  if (!category) {
+    return next(new CustomError("Category not found", 404));
   }
-};
+  if (req.body.image && category.imgCloudinaryId) {
+    try {
+      await cloudinary.uploader.destroy(category.imgCloudinaryId);
+    } catch (error) {
+      console.error("Failed to delete image from Cloudinary:", error);
+    }
+  }
+  const updatedCategory = await Category.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
+      returnDocument: "after",
+      runValidators: true,
+    },
+  );
 
-module.exports = {
-  createCategory,
-  getAllCategories,
-  getCategoryById,
-  updateCategory,
-  deleteCategory,
-};
+  res.status(200).json({
+    status: "success",
+    data: updatedCategory,
+  });
+});
+
+exports.deleteCategory = asyncHandler(async (req, res, next) => {
+  const category = await Category.findByIdAndDelete(req.params.id);
+
+  if (!category) {
+    return next(new CustomError("Category not found", 404));
+  }
+
+  if (category.imgCloudinaryId) {
+    try {
+      await cloudinary.uploader.destroy(category.imgCloudinaryId);
+    } catch (error) {
+      console.error("Failed to delete image from Cloudinary:", error);
+    }
+  }
+
+  res.status(204).json({ status: "success", data: null });
+});
