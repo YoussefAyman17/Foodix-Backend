@@ -1,27 +1,32 @@
 const complaintModel = require("../models/complaintModel");
-const asyncHandler = require("../utils/asyncErrorHandler");
-const customError = require("../utils/customError");
+const asyncErrorHandler = require("../utils/asyncErrorHandler");
+const CustomError = require("../utils/customError");
 
-let createComplaint = asyncHandler(async (req, res, next) => {
+let createComplaint = asyncErrorHandler(async (req, res, next) => {
   let newComplaint = req.body;
   if (req.user) {
     newComplaint.userId = req.user.id;
   }
   let complaint = await complaintModel.create(newComplaint);
-  res.status(201).json({ message: "Complaint Created", Data: complaint });
+  res.status(201).json({ 
+    message: req.user ? "Complaint Created Successfully" : "Guest Complaint Created Successfully", 
+    Data: complaint });
 });
 
-let getAllComplaint = asyncHandler(async (req, res, next) => {
+let getAllComplaint = asyncErrorHandler(async (req, res, next) => {
   let complaints = await complaintModel.find().sort({ createdAt: -1 });
 
-  res.status(200).json({ success: true, count: complaints.length, complaints });
+  res.status(200).json({ 
+    status: 'success',
+     length: complaints.length,
+      data: complaints });
 });
 
-let getComplaintById = asyncHandler(async (req, res, next) => {
-  let { id } = req.params;
-  let complaint = await complaintModel.findOne({ id: id });
+let getComplaintById = asyncErrorHandler(async (req, res, next) => {
+  let complaintId = req.params.id;
+  let complaint = await complaintModel.findById(complaintId );
   if (!complaint) {
-    return next(new customError("Complaint Not Found", 404));
+    return next(new CustomError("Complaint Not Found", 404));
   }
   if (req.user.role !== "Admin") {
     if (
@@ -29,7 +34,7 @@ let getComplaintById = asyncHandler(async (req, res, next) => {
       complaint.userId.toString() !== req.user.id.toString()
     ) {
       return next(
-        new customError("You are not allowed to view this complaint", 403),
+        new CustomError("You are not allowed to view this complaint", 403),
       );
     }
   }
@@ -37,12 +42,12 @@ let getComplaintById = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, Data: complaint });
 });
 
-let editComplaint = asyncHandler(async (req, res, next) => {
-  let { id } = req.params;
-  let complaint = await complaintModel.findOne({ id: id });
+let editComplaint = asyncErrorHandler(async (req, res, next) => {
+  let complaintId = req.params.id;
+  let complaint = await complaintModel.findById(complaintId);
 
   if (!complaint) {
-    return next(new customError("Complaint Not Found", 404));
+    return next(new CustomError("Complaint Not Found", 404));
   }
   if (
     req.user.role !== "Admin" &&
@@ -50,38 +55,38 @@ let editComplaint = asyncHandler(async (req, res, next) => {
       complaint.userId.toString() !== req.user.id.toString())
   ) {
     return next(
-      new customError("You are not allowed to edit this complaint", 403),
+      new CustomError("You are not allowed to edit this complaint", 403),
     );
   }
 
   const { name, email, subject, service, message } = req.body;
 
   let updatedComplaint = await complaintModel.findOneAndUpdate(
-    { id: id },
+    complaintId,
     { name, email, subject, service, message },
     { new: true, runValidators: true },
   );
 
   res.status(200).json({
-    success: true,
+    success: 'success',
     message: "Complaint Updated Successfully",
     Data: updatedComplaint,
   });
 });
 
-let deleteComplaint = asyncHandler(async (req, res, next) => {
+let deleteComplaint = asyncErrorHandler(async (req, res, next) => {
   let { id } = req.params;
-  let Complaint = await complaintModel.findOneAndDelete({ id: id });
+  let Complaint = await complaintModel.findByIdAndDelete(id);
   if (Complaint) {
     res
       .status(200)
       .json({ message: "Complaint deleted Succesfully", DeletedId: id });
   } else {
-    next(new customError("Complaint Not Found", 404));
+    next(new CustomError("Complaint Not Found", 404));
   }
 });
 
-let changeStatus = asyncHandler(async (req, res, next) => {
+let changeStatus = asyncErrorHandler(async (req, res, next) => {
   let { id } = req.params;
   let { status, adminResponse } = req.body;
 
@@ -100,11 +105,11 @@ let changeStatus = asyncHandler(async (req, res, next) => {
       Data: complaint,
     });
   } else {
-    next(new customError("Complaint Not Found", 404));
+    next(new CustomError("Complaint Not Found", 404));
   }
 });
 
-const getMyComplaints = asyncHandler(async (req, res, next) => {
+const getMyComplaints = asyncErrorHandler(async (req, res, next) => {
   const userId = req.user.id;
 
   const complaints = await complaintModel
