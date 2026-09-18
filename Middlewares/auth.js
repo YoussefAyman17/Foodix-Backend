@@ -44,7 +44,6 @@ exports.auth = asyncHandler(async (req, res, next) => {
   user.role = decoded.role;
 
   req.user = user;
-
   next();
 });
 

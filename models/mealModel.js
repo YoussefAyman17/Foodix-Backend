@@ -144,5 +144,6 @@ mealSchema.pre("findOneAndUpdate", function () {
 //   id: "item_counter",
 //   inc_field: "itemId",
 // });
+const Meal = mongoose.model("Meal", mealSchema);
 
-module.exports = mongoose.model("Meal", mealSchema);
+module.exports = Meal;

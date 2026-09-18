@@ -1,135 +1,160 @@
-const OrderModel = require("../models/orderModel");
-const WorkerModel = require("../models/workerModel");
-const MealModel = require("../models/mealModel");
+const Order = require("../models/orderModel");
+const Worker = require("../models/workerModel");
+const Meal = require("../models/mealModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const autoIncrement = require("../utils/autoIncrement");
+const CustomError = require("../utils/customError");
+const mongoose = require("mongoose");
 const Stripe = require("stripe");
 
-const getStripe = () => {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error("🚨 STRIPE_SECRET_KEY is missing in .env file!");
-  }
-  return Stripe(process.env.STRIPE_SECRET_KEY);
-};
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("🚨 STRIPE_SECRET_KEY is missing in .env file!");
+}
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const getAllOrders = asyncErrorHandler(async (req, res, next) => {
-  let orders = await OrderModel.find().populate([
-    {
-      path: "userId",
-      select: "userName email",
-    },
-    {
-      path: "orderItems.foodItem",
-      select: "name img price",
-    },
+  const orders = await Order.find().populate([
+    { path: "userId", select: "userName email" },
+    { path: "orderItems.foodItem", select: "name img price" },
     {
       path: "deliveryPerson",
-      populate: {
-        path: "userId",
-        select: "userName email phone",
-      },
+      populate: { path: "userId", select: "userName email phone" },
     },
   ]);
-  if (orders.length === 0) {
-    return res.status(404).json({ message: "No Orders Exist" });
-  }
-  return res.status(200).json({ success: true, count: orders.length, orders });
+
+  return res.status(200).json({
+    status: "success",
+    count: orders.length,
+    data: orders,
+  });
 });
 
 const getUserOrders = asyncErrorHandler(async (req, res, next) => {
-  let userId = req.user.id;
-  let orders = await OrderModel.find({ userId: userId }).populate({
+  const orders = await Order.find({ userId: req.user.id }).populate({
     path: "orderItems.foodItem",
     select: "name img price",
   });
 
-  if (orders.length === 0) {
-    return res.status(200).json({ message: "No Orders Exist for this user" });
-  }
-  return res.status(200).json({ success: true, count: orders.length, orders });
+  return res.status(200).json({
+    status: "success",
+    count: orders.length,
+    data: orders,
+  });
 });
 
 const trackOrder = asyncErrorHandler(async (req, res, next) => {
   const orderId = req.params.id;
-  const order = await OrderModel.findOne({ orderId: orderId }).populate(
+  const order = await Order.findOne({ orderId }).populate(
     "deliveryPerson",
     "deliveryDetails name phone",
   );
 
   if (!order) {
-    return res.status(404).json({ message: "Order not found" });
+    return next(new CustomError("Order not found", 404));
   }
+
   if (
     req.user.role !== "Admin" &&
     order.userId.toString() !== req.user.id.toString()
   ) {
-    return res
-      .status(403)
-      .json({ message: "You are not authorized to track this order" });
-  }
-  if (!order.deliveryPerson) {
-    return res
-      .status(400)
-      .json({ message: "Order is not assigned to a Delivery Person yet" });
+    return next(
+      new CustomError("You are not authorized to track this order", 403),
+    );
   }
 
-  const location = order.deliveryPerson.deliveryDetails.currentLocation;
-  return res.status(200).json({ success: true, deliveryLocation: location });
+  if (!order.deliveryPerson) {
+    return next(
+      new CustomError("Order is not assigned to a delivery person yet", 400),
+    );
+  }
+
+  const location = order.deliveryPerson.deliveryDetails?.currentLocation;
+  return res.status(200).json({
+    status: "success",
+    data: location,
+  });
 });
 
 const checkout = asyncErrorHandler(async (req, res, next) => {
   const userId = req.user.id;
-  const { orderItems, shippingAddress, paymentMethod, deliveryPrice } =
-    req.body;
+  const {
+    orderItems,
+    shippingAddress,
+    paymentMethod,
+    deliveryPrice = 20,
+  } = req.body;
+
+  if (!orderItems || orderItems.length === 0) {
+    return next(new CustomError("No order items provided", 400));
+  }
+
+  const itemIds = orderItems.map((item) => item.foodItem);
+  const meals = await Meal.find({ _id: { $in: itemIds } });
+  const mealMap = new Map(meals.map((m) => [m._id.toString(), m]));
 
   let calculatedItemsPrice = 0;
+  const orderItemsWithPrices = [];
 
-  const orderItemsWithPrices = await Promise.all(
-    orderItems.map(async (item) => {
-      const meal = await MealModel.findById(item.foodItem);
-      if (!meal) throw new Error(`Meal not found`);
-      let sizePrice = 0;
-      if (meal.sizes && item.size && meal.sizes.length > 0) {
-        let size = meal.sizes.find((s) => s.size === item.size);
-        if (size) {
-          sizePrice = size.extraPrice;
-        }
-      }
-      calculatedItemsPrice += (meal.price + sizePrice) * item.quantity;
+  for (const item of orderItems) {
+    const meal = mealMap.get(item.foodItem.toString());
+    if (!meal) {
+      return next(new CustomError(`Meal not found: ${item.foodItem}`, 404));
+    }
 
-      return {
-        foodItem: item.foodItem,
-        name: meal.name,
-        quantity: item.quantity,
-        size: item.size,
-        priceAtPurchase: meal.price + sizePrice,
-      };
-    }),
-  );
+    let sizePrice = 0;
+    if (meal.sizes && item.size) {
+      const sizeObj = meal.sizes.find((s) => s.size === item.size);
+      if (sizeObj) sizePrice = sizeObj.extraPrice || 0;
+    }
 
-  const finalDeliveryPrice = deliveryPrice || 20;
+    const unitPrice = meal.price + sizePrice;
+    calculatedItemsPrice += unitPrice * item.quantity;
 
-  const newOrder = await OrderModel.create({
-    userId,
-    orderItems: orderItemsWithPrices,
-    shippingAddress,
-    itemsPrice: calculatedItemsPrice,
-    deliveryPrice: finalDeliveryPrice,
-    paymentMethod,
-    isPaid: false,
-  });
+    orderItemsWithPrices.push({
+      foodItem: item.foodItem,
+      name: meal.name,
+      quantity: item.quantity,
+      size: item.size,
+      priceAtPurchase: unitPrice,
+    });
+  }
 
-  const updateMealsPromises = orderItems.map((item) => {
-    return MealModel.findByIdAndUpdate(
-      item.foodItem,
-      {
-        $inc: { orders_count: item.quantity },
-      },
-      { new: true },
+  const session = await mongoose.startSession();
+  let newOrder;
+
+  try {
+    session.startTransaction();
+
+    [newOrder] = await Order.create(
+      [
+        {
+          userId,
+          orderItems: orderItemsWithPrices,
+          shippingAddress,
+          itemsPrice: calculatedItemsPrice,
+          deliveryPrice,
+          paymentMethod,
+          isPaid: false,
+        },
+      ],
+      { session },
     );
-  });
 
-  await Promise.all(updateMealsPromises);
+    const updatePromises = orderItems.map((item) =>
+      Meal.findByIdAndUpdate(
+        item.foodItem,
+        { $inc: { orders_count: item.quantity } },
+        { session },
+      ),
+    );
+    await Promise.all(updatePromises);
+
+    await session.commitTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    return next(error);
+  } finally {
+    session.endSession();
+  }
 
   if (paymentMethod === "Stripe") {
     const line_items = orderItemsWithPrices.map((item) => ({
@@ -145,14 +170,12 @@ const checkout = asyncErrorHandler(async (req, res, next) => {
       price_data: {
         currency: "egp",
         product_data: { name: "Delivery Fee" },
-        unit_amount: Math.round(finalDeliveryPrice * 100),
+        unit_amount: Math.round(deliveryPrice * 100),
       },
       quantity: 1,
     });
 
-    const stripe = getStripe();
-
-    const session = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items,
       mode: "payment",
@@ -162,75 +185,70 @@ const checkout = asyncErrorHandler(async (req, res, next) => {
     });
 
     return res.status(201).json({
-      success: true,
+      status: "success",
       message: "Redirecting to payment...",
-      url: session.url,
+      data: {
+        url: checkoutSession.url,
+        order: newOrder,
+      },
     });
   }
 
   return res.status(201).json({
-    success: true,
+    status: "success",
     message: "Order created successfully (Cash on Delivery)",
-    order: newOrder,
+    data: newOrder,
   });
 });
 
 const updateOrderStatus = asyncErrorHandler(async (req, res, next) => {
-  const orderId = req.params.id;
   const { newStatus } = req.body;
-  const io = req.app.get("socketio");
+  const orderId = req.params.id;
 
   if (!newStatus) {
-    return res.status(400).json({ message: "Please provide a new status" });
+    return next(new CustomError("Please provide a new status", 400));
   }
 
-  const updatedOrder = await OrderModel.findOneAndUpdate(
-    { orderId: orderId },
-    { status: newStatus },
-    { new: true, runValidators: true },
-  );
+  const updateFields = { status: newStatus };
+  if (newStatus === "Delivered") {
+    updateFields.deliveredAt = Date.now();
+  }
+
+  const updatedOrder = await Order.findOneAndUpdate({ orderId }, updateFields, {
+    new: true,
+    runValidators: true,
+  });
 
   if (!updatedOrder) {
-    return res.status(404).json({ message: "Order is not found" });
+    return next(new CustomError("Order not found", 404));
   }
 
+  const io = req.app.get("socketio");
   if (io) {
-    io.emit("orderStatusChanged", {
+    const room = orderId.toString();
+    io.to(room).emit("orderStatusChanged", {
       orderId: updatedOrder.orderId,
-      _id: updatedOrder._id,
       status: updatedOrder.status,
-      order: updatedOrder,
     });
-  }
 
-  if (newStatus === "Preparing" && io) {
-    io.emit("orderStatusChanged", {
-      orderId: updatedOrder.orderId,
-      status: "Preparing",
-    });
-  }
+    if (newStatus === "On the way") {
+      io.to(room).emit("orderStartedMoving", {
+        message: "Your order is on the way!",
+        deliveryPersonId: updatedOrder.deliveryPerson,
+      });
+    }
 
-  if (newStatus === "On the way" && io) {
-    io.to(orderId.toString()).emit("orderStartedMoving", {
-      message: "The delivery has received the order and is on his way to you!",
-      deliveryPersonId: updatedOrder.deliveryPerson,
-    });
-  }
-
-  if (newStatus === "Delivered" && io) {
-    updatedOrder.deliveredAt = Date.now();
-    await updatedOrder.save();
-
-    io.to(orderId.toString()).emit("orderFinished", {
-      message:
-        "Your order has been delivered successfully, thank you for using Foodix!",
-    });
+    if (newStatus === "Delivered") {
+      io.to(room).emit("orderFinished", {
+        message: "Your order has been delivered successfully!",
+      });
+    }
   }
 
   return res.status(200).json({
-    success: true,
+    status: "success",
     message: "Order status updated successfully",
-    order: updatedOrder,
+    data: updatedOrder,
   });
 });
 
@@ -240,102 +258,89 @@ const assignOrderToDeliveryPerson = asyncErrorHandler(
     const { deliveryPersonId } = req.body;
 
     if (!deliveryPersonId) {
-      return res
-        .status(400)
-        .json({ message: "Please provide a delivery person ID" });
+      return next(new CustomError("Please provide a delivery person ID", 400));
     }
 
-    const deliveryWorker = await WorkerModel.findOne({
+    const deliveryWorker = await Worker.findOne({
       _id: deliveryPersonId,
       role: "Delivery",
       status: "Active",
     });
 
     if (!deliveryWorker) {
-      return res.status(404).json({
-        message: "Active delivery worker is not found",
-      });
+      return next(new CustomError("Active delivery worker not found", 404));
     }
 
-    const updatedOrder = await OrderModel.findOneAndUpdate(
-      { orderId: orderId },
-      {
-        deliveryPerson: deliveryPersonId,
-        status: "On the way",
-      },
+    const updatedOrder = await Order.findOneAndUpdate(
+      { orderId },
+      { deliveryPerson: deliveryPersonId, status: "On the way" },
       { new: true, runValidators: true },
     ).populate({
       path: "deliveryPerson",
-      populate: {
-        path: "userId",
-        select: "userName email phone",
-      },
+      populate: { path: "userId", select: "userName email phone" },
     });
 
     if (!updatedOrder) {
-      return res.status(404).json({ message: "Order is not found" });
+      return next(new CustomError("Order not found", 404));
     }
-    const io = req.app.get("socketio"); // اسحب الـ io هنا كمان
 
+    const io = req.app.get("socketio");
     if (io) {
-      io.emit(`newOrderFor_${deliveryPersonId}`, { order: updatedOrder });
+      io.to(`worker_${deliveryPersonId}`).emit("newOrderAssigned", {
+        order: updatedOrder,
+      });
     }
+
     return res.status(200).json({
-      success: true,
-      message: "Order assigned to delivery person successfully",
-      order: updatedOrder,
+      status: "success",
+      message: "Order assigned successfully",
+      data: updatedOrder,
     });
   },
 );
 
 const stripeWebhook = async (req, res) => {
-  const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
-
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error("Webhook signature verification failed.", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-
     const orderId = session.client_reference_id;
 
-    await OrderModel.findByIdAndUpdate(orderId, {
+    await Order.findByIdAndUpdate(orderId, {
       isPaid: true,
       paidAt: Date.now(),
       status: "Preparing",
       "paymentInfo.sessionId": session.id,
       "paymentInfo.paymentStatus": "paid",
     });
-
-    console.log(`✅ Order ${orderId} has been successfully paid!`);
   }
 
-  res.status(200).json({ received: true });
+  return res.status(200).json({ status: "success", received: true });
 };
 
 const getDeliveryOrders = asyncErrorHandler(async (req, res, next) => {
   const deliveryId = req.user.workerId;
   if (!deliveryId) {
     return next(
-      new customError("You are not authorized as a delivery person", 403),
+      new CustomError("You are not authorized as a delivery person", 403),
     );
   }
 
-  const orders = await OrderModel.find({ deliveryPerson: deliveryId })
+  const orders = await Order.find({ deliveryPerson: deliveryId })
     .populate("userId", "userName phone")
     .sort({ createdAt: -1 });
 
-  res.status(200).json({
-    success: true,
-    results: orders.length,
+  return res.status(200).json({
+    status: "success",
+    count: orders.length,
     data: orders,
   });
 });
