@@ -52,6 +52,15 @@ class ApiFeatures {
         ];
       }
 
+      if (modalName === "Complaint") {
+        query.$or = [
+          { name: { $regex: this.queryString.keyword, $options: "i" } },
+          { email: { $regex: this.queryString.keyword, $options: "i" } },
+          { subject: { $regex: this.queryString.keyword, $options: "i" } },
+          { message: { $regex: this.queryString.keyword, $options: "i" } },
+        ];
+      }
+
       this.mongooseQuery = this.mongooseQuery.find(query);
     }
     return this;

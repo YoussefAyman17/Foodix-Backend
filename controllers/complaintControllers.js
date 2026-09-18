@@ -1,6 +1,7 @@
 const complaintModel = require("../models/complaintModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
 const CustomError = require("../utils/customError");
+const ApiFeatures = require("../utils/apiFeatures");
 
 let createComplaint = asyncErrorHandler(async (req, res, next) => {
   let newComplaint = req.body;
@@ -13,13 +14,26 @@ let createComplaint = asyncErrorHandler(async (req, res, next) => {
     Data: complaint });
 });
 
-let getAllComplaint = asyncErrorHandler(async (req, res, next) => {
-  let complaints = await complaintModel.find().sort({ createdAt: -1 });
+const getAllComplaint = asyncErrorHandler(async (req, res, next) => {
+  const totalDocuments = await complaintModel.countDocuments();
 
-  res.status(200).json({ 
-    status: 'success',
-     length: complaints.length,
-      data: complaints });
+  const features = new ApiFeatures(
+    complaintModel.find(),
+    req.query
+  )
+    .filter()
+    .sort()
+    .search("Complaint")
+    .paginate(totalDocuments);
+
+  const complaints = await features.mongooseQuery;
+
+  res.status(200).json({
+    status: "success",
+    count: complaints.length,
+    pagination: features.paginationResult,
+    data: complaints,
+  });
 });
 
 let getComplaintById = asyncErrorHandler(async (req, res, next) => {
