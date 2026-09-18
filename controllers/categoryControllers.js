@@ -1,6 +1,7 @@
 const Category = require("../models/categoryModel");
-const asyncHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
+const asyncHandler = require('../utils/asyncErrorHandler');
+const ApiFeatures = require('../Utils/apiFeatures');
+const CustomError = require("../Utils/customError");
 const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("../utils/cloudinary");
@@ -62,11 +63,24 @@ exports.createCategory = asyncHandler(async (req, res) => {
   });
 });
 
-exports.getAllCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find();
-  res
-    .status(200)
-    .json({ status: "success", count: categories.length, data: categories });
+exports.getAllCategories = asyncErrorHandler(async (req, res, next) => {
+   const documentsCount = await Category.countDocuments();
+
+   const features = new ApiFeatures(Category.find(), req.query)
+    .filter()
+    .search("Category")
+    .sort()
+    .limitFields()
+    .paginate(documentsCount);
+
+    const categories = await features.mongooseQuery;
+
+  res.status(200).json({
+    status: "success",
+    results: categories.length,
+    paginationResult: features.paginationResult,   
+    data: categories,
+  });
 });
 
 exports.getCategoryById = asyncHandler(async (req, res, next) => {

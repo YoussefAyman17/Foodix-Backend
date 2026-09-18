@@ -1,7 +1,7 @@
 const complaintModel = require("../models/complaintModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
-const ApiFeatures = require("../utils/apiFeatures");
+const CustomError = require("../Utils/customError");
+const ApiFeatures = require("../Utils/apiFeatures");
 
 let createComplaint = asyncErrorHandler(async (req, res, next) => {
   let newComplaint = req.body;

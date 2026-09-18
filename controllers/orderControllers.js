@@ -2,7 +2,8 @@ const Order = require("../models/orderModel");
 const Worker = require("../models/workerModel");
 const Meal = require("../models/mealModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
+const ApiFeatures = require('../Utils/apiFeatures');
+const CustomError = require("../Utils/customError");
 const mongoose = require("mongoose");
 const Stripe = require("stripe");
 
@@ -12,7 +13,18 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const getAllOrders = asyncErrorHandler(async (req, res, next) => {
-  const orders = await Order.find().populate([
+  let filter = {};
+   if (req.params.userId) filter = { userId: req.params.userId };
+
+   const documentsCount = await Order.countDocuments(filter);
+
+   const features = new ApiFeatures(Order.find(filter), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate(documentsCount);
+
+   const orders = await features.mongooseQuery.populate([
     { path: "userId", select: "userName email" },
     { path: "orderItems.foodItem", select: "name img price" },
     {
@@ -23,9 +35,11 @@ const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
   return res.status(200).json({
     status: "success",
-    count: orders.length,
+    results: orders.length,
+    paginationResult: features.paginationResult,
     data: orders,
   });
+
 });
 
 const getUserOrders = asyncErrorHandler(async (req, res, next) => {
