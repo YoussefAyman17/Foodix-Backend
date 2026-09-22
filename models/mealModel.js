@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
-const autoIncrement = require("../utils/autoIncrement");
+// const autoIncrement = require("../utils/autoIncrement");
+const Category = require("./categoryModel");
 
 const mealSchema = new mongoose.Schema(
   {
@@ -91,11 +92,11 @@ const mealSchema = new mongoose.Schema(
         },
       },
     ],
-    quantity: {
-      type: Number,
-      default: 0,
-      min: [0, "Quantity cannot be less than zero"],
-    },
+    // quantity: {
+    //   type: Number,
+    //   default: 0,
+    //   min: [0, "Quantity cannot be less than zero"],
+    // },
     slug: {
       type: String,
       unique: true,
@@ -123,6 +124,20 @@ mealSchema.virtual("reviews", {
 mealSchema.pre("validate", function () {
   if (this.name) {
     this.slug = slugify(this.name, { lower: true, strict: true });
+  }
+});
+
+mealSchema.post("save", async function () {
+  await Category.findByIdAndUpdate(this.category, {
+    $inc: { mealsCount: 1 },
+  });
+});
+
+mealSchema.post("findOneAndDelete", async function (doc) {
+  if (doc) {
+    await Category.findByIdAndUpdate(doc.category, {
+      $inc: { mealsCount: -1 },
+    });
   }
 });
 

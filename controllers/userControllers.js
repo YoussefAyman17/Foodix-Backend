@@ -10,9 +10,13 @@ const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const createToken = (id, role, user, req, res, message) => {
-  const token = jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  });
+  const token = jwt.sign(
+    { id, role, name: user.userName, email: user.email },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    },
+  );
 
   const cookiesOptions = {
     expires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),

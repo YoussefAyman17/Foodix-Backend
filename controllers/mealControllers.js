@@ -27,10 +27,11 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-exports.uploadMealPhoto = upload.single("photo");
+exports.uploadMealPhoto = upload.single("img");
 
 exports.resizeMealPhoto = asyncHandler(async (req, res, next) => {
   if (!req.file) return next();
+  if (req.body.img && req.body.imgCloudinaryId) return next();
   const imageBuffer = await sharp(req.file.buffer)
     .resize(800, 800, {
       fit: "cover",
@@ -70,34 +71,47 @@ exports.createItem = asyncHandler(async (req, res, next) => {
       ),
     );
   }
-  const meal = await Meal.create(req.body);
-  await meal.populate({
+  let mealData = { ...req.body };
+
+  if (typeof mealData.sizes === "string") {
+    try {
+      mealData.sizes = JSON.parse(mealData.sizes);
+    } catch (e) {
+      mealData.sizes = [];
+    }
+  }
+
+  const newMeal = await Meal.create(mealData);
+  await newMeal.populate({
     path: "category",
     select: "name slug",
   });
-  res.status(201).json({ status: "success", data: meal });
+  res.status(201).json({ status: "success", data: newMeal });
 });
 
 exports.getAllItems = asyncHandler(async (req, res, next) => {
-  let filterObj = {};
-  if (req.query.categorySlug) {
-    const category = await Category.findOne({ slug: req.query.categorySlug });
-    if (!category) {
-      return next(new CustomError("No category found with that slug.", 404));
-    }
-    filterObj.category = category._id;
-  }
+  // let filterObj = {};
 
-  const documentsCount = await Meal.countDocuments(filterObj);
+  // if (req.query.categorySlug) {
+  //   const category = await Category.findOne({ slug: req.query.categorySlug });
+  //   if (!category) {
+  //     return next(new CustomError("No category found with that slug.", 404));
+  //   }
+  //   filterObj.category = category._id;
+  // }
 
-  const features = new ApiFeatures(Meal.find(filterObj), req.query)
-    .filter()
-    .search("Meals")
-    .sort()
-    .limitFields()
-    .paginate(documentsCount);
+  // const features = new ApiFeatures(Meal.find(filterObj), req.query)
+  //   .filter()
+  //   .search("Meals")
+  //   .sort()
+  //   .limitFields();
 
-  const meals = await features.mongooseQuery.populate({
+  // const filteredQuery = features.mongooseQuery.clone();
+  // const documentsCount = await filteredQuery.countDocuments();
+
+  // features.paginate(documentsCount);
+
+  const meals = await Meal.find().populate({
     path: "category",
     select: "name slug",
   });
@@ -105,7 +119,7 @@ exports.getAllItems = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     results: meals.length,
-    pagination: features.paginationResult,
+    // pagination: features.paginationResult,
     data: meals,
   });
 });
@@ -126,19 +140,31 @@ exports.updateItem = asyncHandler(async (req, res, next) => {
   if (!meal) {
     return next(new CustomError("Meal not found", 404));
   }
-
+  let imgCloudinaryId = null;
   if (req.body.img && meal.imgCloudinaryId) {
+    imgCloudinaryId = meal.imgCloudinaryId;
+  }
+
+  let mealData = { ...req.body };
+
+  if (typeof mealData.sizes === "string") {
     try {
-      await cloudinary.uploader.destroy(meal.imgCloudinaryId);
+      mealData.sizes = JSON.parse(mealData.sizes);
+    } catch (e) {
+      mealData.sizes = [];
+    }
+  }
+  const updatedMeal = await Meal.findByIdAndUpdate(req.params.id, mealData, {
+    returnDocument: "after",
+    runValidators: true,
+  }).populate("category", "name slug");
+  if (imgCloudinaryId) {
+    try {
+      await cloudinary.uploader.destroy(imgCloudinaryId);
     } catch (error) {
       console.error("Failed to delete image from Cloudinary:", error);
     }
   }
-
-  const updatedMeal = await Meal.findByIdAndUpdate(req.params.id, req.body, {
-    returnDocument: "after",
-    runValidators: true,
-  }).populate("category", "name slug");
 
   res.status(200).json({ status: "success", data: updatedMeal });
 });

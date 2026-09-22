@@ -36,6 +36,7 @@ const categorySchema = new mongoose.Schema(
       index: true,
       unique: true,
     },
+    mealsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,
@@ -52,4 +53,5 @@ categorySchema.pre(/^(updateOne|findOneAndUpdate)/, function (next) {
     update.slug = slugify(update.name, { lower: true, strict: true });
   }
 });
-module.exports = mongoose.model("Category", categorySchema);
+const Category = mongoose.model("Category", categorySchema);
+module.exports = Category;

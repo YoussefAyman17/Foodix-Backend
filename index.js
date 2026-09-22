@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const dotenv = require("dotenv");
+dotenv.config({ path: "./config.env" });
 const path = require("path");
 
 const orderRouter = require("./routes/orderRoutes");
@@ -12,7 +13,7 @@ const userRouter = require("./routes/userRoutes");
 const complaintRouter = require("./routes/complaintRoutes");
 const categoryRouter = require("./routes/categoryRoutes");
 const mealRouter = require("./routes/mealRoutes");
-const reviewRouter = require('./routes/reviewRoutes');
+const reviewRouter = require("./routes/reviewRoutes");
 
 const { handleDeliverySockets } = require("./sockets/SocketController");
 const { stripeWebhook } = require("./controllers/orderControllers");
@@ -21,10 +22,9 @@ const errorHandler = require("./controllers/errorControllers");
 const app = express();
 const server = http.createServer(app);
 
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
-dotenv.config({ path: "./config.env" });  
 mongoose
   .connect(process.env.DATABASE)
   .then(() => {
@@ -33,8 +33,6 @@ mongoose
   .catch((err) => {
     console.log("error:", err.message);
   });
-
-
 
 app.post(
   "/api/webhook",
@@ -52,7 +50,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/meals", mealRouter);
-app.use("/api/v1/reviews",reviewRouter)
+app.use("/api/v1/reviews", reviewRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: req.url + "not found" });

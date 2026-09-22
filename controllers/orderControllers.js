@@ -6,11 +6,6 @@ const CustomError = require("../utils/customError");
 const mongoose = require("mongoose");
 const Stripe = require("stripe");
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error("🚨 STRIPE_SECRET_KEY is missing in .env file!");
-}
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
 const getAllOrders = asyncErrorHandler(async (req, res, next) => {
   const orders = await Order.find().populate([
     { path: "userId", select: "userName email" },
@@ -75,6 +70,7 @@ const trackOrder = asyncErrorHandler(async (req, res, next) => {
 });
 
 const checkout = asyncErrorHandler(async (req, res, next) => {
+  const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
   const userId = req.user.id;
   const {
     orderItems,

@@ -1,9 +1,16 @@
 const Category = require("../models/categoryModel");
 const asyncHandler = require("../utils/asyncErrorHandler");
+// const { utils } = require("../utils/cloudinary");
 const CustomError = require("../utils/customError");
 const multer = require("multer");
 const sharp = require("sharp");
-const cloudinary = require("../utils/cloudinary");
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // console.log(cloudinary);
 const multerStorage = multer.memoryStorage();
