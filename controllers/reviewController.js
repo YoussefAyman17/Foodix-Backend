@@ -1,6 +1,6 @@
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const ApiFeatures = require("../utils/apiFeatures");
-const CustomError = require("../utils/customError");
+const ApiFeatures = require('../Utils/apiFeatures');
+const CustomError = require("../Utils/customError");
 const Review = require("../models/reviewModel");
 
 const Order = require("../models/orderModel");
@@ -31,19 +31,21 @@ exports.createReview = asyncErrorHandler(async (req, res, next) => {
 exports.getAllReviews = asyncErrorHandler(async (req, res, next) => {
   let filter = {};
   if (req.params.mealId) filter = { meal: req.params.mealId };
+  const documentsCount = await Review.countDocuments(filter);
   const features = new ApiFeatures(Review.find(filter), req.query)
     .filter()
+    .search("Review")  
     .sort()
     .limitFields()
-    .paginate();
-  const reviews = await features.mongooseQuery;
+    .paginate(documentsCount);
+
+    const reviews = await features.mongooseQuery;
 
   res.status(200).json({
     status: "success",
     results: reviews.length,
-    data: {
-      data: reviews,
-    },
+    paginationResult: features.paginationResult,      
+    data:  reviews,
   });
 });
 

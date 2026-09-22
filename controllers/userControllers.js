@@ -1,7 +1,8 @@
 const userModel = require("../models/userModel");
 const WorkerModel = require("../models/workerModel");
 const asyncHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
+const CustomError = require("../Utils/customError");
+const ApiFeatures = require('../Utils/apiFeatures');
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
@@ -280,8 +281,23 @@ let updatePassword = asyncHandler(async (req, res, next) => {
 
 // get all users
 let getAllUsers = asyncHandler(async (req, res, next) => {
-  let users = await userModel.find();
-  res.status(200).json({ status: "success", data: users });
+   const documentsCount = await userModel.countDocuments();
+
+   const features = new ApiFeatures(userModel.find(), req.query)
+    .filter()
+    .search("User")
+    .sort()
+    .limitFields()
+    .paginate(documentsCount);
+
+   let users = await features.mongooseQuery;
+
+  res.status(200).json({
+    status: "success",
+    results: users.length,
+    paginationResult: features.paginationResult,
+    data: users,
+  });
 });
 
 // get user by id

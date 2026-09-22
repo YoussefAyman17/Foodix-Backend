@@ -2,15 +2,29 @@ const OrderModel = require("../models/orderModel");
 const user = require("../models/userModel");
 const Worker = require("../models/workerModel");
 const asyncHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
+const CustomError = require("../Utils/customError");
+const ApiFeatures = require('../Utils/apiFeatures');
 
-const getAllWorkers = asyncHandler(async (req, res) => {
-  const workers = await Worker.find().populate(
+const getAllWorkers = asyncHandler(async (req, res, next) => {
+   const documentsCount = await Worker.countDocuments();
+
+   const features = new ApiFeatures(Worker.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate(documentsCount);
+
+   const workers = await features.mongooseQuery.populate(
     "userId",
-    "userName email phone",
+    "userName email phone"
   );
 
-  return res.status(200).json({ status: "success", data: workers });
+  return res.status(200).json({
+    status: "success",
+    results: workers.length,
+    paginationResult: features.paginationResult,
+    data: workers,
+  });
 });
 
 const getOnlineDelivery = asyncHandler(async (req, res) => {

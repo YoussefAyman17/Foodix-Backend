@@ -24,7 +24,7 @@ class ApiFeatures {
 
   sort() {
     if (this.queryString.sort) {
-      const sortBy = this.queryString.split(",").join(" ");
+      const sortBy = this.queryString.sort.split(",").join(" ");
       this.mongooseQuery = this.mongooseQuery.sort(sortBy);
     } else {
       this.mongooseQuery = this.mongooseQuery.sort("-createdAt");
@@ -34,7 +34,7 @@ class ApiFeatures {
 
   limitFields() {
     if (this.queryString.fields) {
-      const fields = this.queryString.split(",").join(" ");
+      const fields = this.queryString.fields.split(",").join(" ");
       this.mongooseQuery = this.mongooseQuery.select(fields);
     } else {
       this.mongooseQuery = this.mongooseQuery.select("-__v");
@@ -45,10 +45,39 @@ class ApiFeatures {
   search(modalName) {
     if (this.queryString.keyword) {
       let query = {};
+
       if (modalName === "Meal") {
         query.$or = [
           { name: { $regex: this.queryString.keyword, $options: "i" } },
           { description: { $regex: this.queryString.keyword, $options: "i" } },
+        ];
+      }
+      else if (modalName === "Review") {
+        query.$or = [
+          { comment: { $regex: this.queryString.keyword, $options: "i" } },
+        ];
+      }
+
+      else if (modalName === "Category") {
+        query.$or = [
+          { name: { $regex: this.queryString.keyword, $options: "i" } },
+          { description: { $regex: this.queryString.keyword, $options: "i" } },
+        ];
+      }
+
+      else if (modalName === "User") {
+        query.$or = [
+          { userName: { $regex: this.queryString.keyword, $options: "i" } },
+          { email: { $regex: this.queryString.keyword, $options: "i" } },
+        ];
+      }
+
+      else if (modalName === "Complaint") {
+        query.$or = [
+          { name: { $regex: this.queryString.keyword, $options: "i" } },
+          { email: { $regex: this.queryString.keyword, $options: "i" } },
+          { subject: { $regex: this.queryString.keyword, $options: "i" } },
+          { message: { $regex: this.queryString.keyword, $options: "i" } },
         ];
       }
 

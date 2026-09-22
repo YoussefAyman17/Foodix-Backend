@@ -4,11 +4,6 @@ const autoIncrement = require("../utils/autoIncrement");
 
 const ComplaintSchema = new mongoose.Schema(
   {
-    id: {
-      type: Number,
-      index: true,
-      unique: true,
-    },
     name: {
       type: String,
       trim: true,
