@@ -13,6 +13,7 @@ class ApiFeatures {
       "fields",
       "keyword",
       "categorySlug",
+      "category",
     ];
     excludedFields.forEach((ele) => delete queryObj[ele]);
 
@@ -51,28 +52,21 @@ class ApiFeatures {
           { name: { $regex: this.queryString.keyword, $options: "i" } },
           { description: { $regex: this.queryString.keyword, $options: "i" } },
         ];
-      }
-      else if (modalName === "Review") {
+      } else if (modalName === "Review") {
         query.$or = [
           { comment: { $regex: this.queryString.keyword, $options: "i" } },
         ];
-      }
-
-      else if (modalName === "Category") {
+      } else if (modalName === "Category") {
         query.$or = [
           { name: { $regex: this.queryString.keyword, $options: "i" } },
           { description: { $regex: this.queryString.keyword, $options: "i" } },
         ];
-      }
-
-      else if (modalName === "User") {
+      } else if (modalName === "User") {
         query.$or = [
           { userName: { $regex: this.queryString.keyword, $options: "i" } },
           { email: { $regex: this.queryString.keyword, $options: "i" } },
         ];
-      }
-
-      else if (modalName === "Complaint") {
+      } else if (modalName === "Complaint") {
         query.$or = [
           { name: { $regex: this.queryString.keyword, $options: "i" } },
           { email: { $regex: this.queryString.keyword, $options: "i" } },
@@ -88,7 +82,7 @@ class ApiFeatures {
 
   paginate(totalDocuments) {
     const page = this.queryString.page * 1 || 1;
-    const limit = this.queryString.limit * 1 || 1;
+    const limit = this.queryString.limit * 1 || 20;
     const skip = (page - 1) * limit;
     const endIndex = page * limit;
 
@@ -111,4 +105,4 @@ class ApiFeatures {
     return this;
   }
 }
- module.exports = ApiFeatures;
+module.exports = ApiFeatures;

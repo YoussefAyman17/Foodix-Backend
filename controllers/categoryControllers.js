@@ -69,7 +69,7 @@ exports.createCategory = asyncHandler(async (req, res) => {
   });
 });
 
-exports.getAllCategories = asyncErrorHandler(async (req, res, next) => {
+exports.getAllCategories = asyncHandler(async (req, res, next) => {
   const documentsCount = await Category.countDocuments();
 
   const features = new ApiFeatures(Category.find(), req.query)

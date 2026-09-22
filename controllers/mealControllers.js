@@ -90,28 +90,27 @@ exports.createItem = asyncHandler(async (req, res, next) => {
 });
 
 exports.getAllItems = asyncHandler(async (req, res, next) => {
-  // let filterObj = {};
+  let filterObj = {};
+  const categorySlug = req.params.categorySlug || req.query.categorySlug;
+  if (categorySlug) {
+    const category = await Category.findOne({ slug: categorySlug });
+    if (!category) {
+      return next(new CustomError("No category found with that slug.", 404));
+    }
+    filterObj.category = category._id;
+  }
+  const features = new ApiFeatures(Meal.find(filterObj), req.query)
+    .filter()
+    .search("Meal")
+    .sort()
+    .limitFields();
 
-  // if (req.query.categorySlug) {
-  //   const category = await Category.findOne({ slug: req.query.categorySlug });
-  //   if (!category) {
-  //     return next(new CustomError("No category found with that slug.", 404));
-  //   }
-  //   filterObj.category = category._id;
-  // }
+  const filteredQuery = features.mongooseQuery.clone();
+  const documentsCount = await filteredQuery.countDocuments();
 
-  // const features = new ApiFeatures(Meal.find(filterObj), req.query)
-  //   .filter()
-  //   .search("Meals")
-  //   .sort()
-  //   .limitFields();
+  features.paginate(documentsCount);
 
-  // const filteredQuery = features.mongooseQuery.clone();
-  // const documentsCount = await filteredQuery.countDocuments();
-
-  // features.paginate(documentsCount);
-
-  const meals = await Meal.find().populate({
+  const meals = await features.mongooseQuery.populate({
     path: "category",
     select: "name slug",
   });
@@ -119,7 +118,7 @@ exports.getAllItems = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     results: meals.length,
-    // pagination: features.paginationResult,
+    pagination: features.paginationResult,
     data: meals,
   });
 });
