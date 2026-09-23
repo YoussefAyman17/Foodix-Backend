@@ -1,22 +1,22 @@
 const OrderModel = require("../models/orderModel");
-const user = require("../models/userModel");
+const User = require("../models/userModel");
 const Worker = require("../models/workerModel");
 const asyncHandler = require("../utils/asyncErrorHandler");
 const CustomError = require("../Utils/customError");
-const ApiFeatures = require('../Utils/apiFeatures');
+const ApiFeatures = require("../Utils/apiFeatures");
 
 const getAllWorkers = asyncHandler(async (req, res, next) => {
-   const documentsCount = await Worker.countDocuments();
+  const documentsCount = await Worker.countDocuments();
 
-   const features = new ApiFeatures(Worker.find(), req.query)
+  const features = new ApiFeatures(Worker.find(), req.query)
     .filter()
     .sort()
     .limitFields()
     .paginate(documentsCount);
 
-   const workers = await features.mongooseQuery.populate(
+  const workers = await features.mongooseQuery.populate(
     "userId",
-    "userName email phone"
+    "userName email phone",
   );
 
   return res.status(200).json({
@@ -43,10 +43,9 @@ const addNewWorker = asyncHandler(async (req, res, next) => {
   let targetUserId = userId;
 
   if (!targetUserId && userData) {
-    const { userName, name, email, phone } = userData;
-    const finalUserName = userName || name;
+    const { userName, email, phone } = userData;
 
-    if (!finalUserName || !email) {
+    if (!userName || !email) {
       return next(
         new CustomError(
           "Worker name and email are required when creating a new user",
@@ -55,11 +54,11 @@ const addNewWorker = asyncHandler(async (req, res, next) => {
       );
     }
 
-    let user = await user.findOne({ email });
+    let user = await User.findOne({ email });
 
     if (!user) {
-      user = await user.create({
-        userName: finalUserName,
+      user = await User.create({
+        userName,
         email,
         phone: phone || undefined,
         password: "Worker123",
@@ -161,7 +160,7 @@ const updateWorkerData = asyncHandler(async (req, res, next) => {
       filteredUserUpdates.phone = userUpdates.phone || undefined;
 
     if (Object.keys(filteredUserUpdates).length > 0) {
-      await user.findByIdAndUpdate(workerToUpdate.userId, filteredUserUpdates, {
+      await User.findByIdAndUpdate(workerToUpdate.userId, filteredUserUpdates, {
         runValidators: true,
       });
     }

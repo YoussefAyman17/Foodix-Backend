@@ -10,7 +10,7 @@ const workerSchema = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      enum: ["Admin", "Chef", "Waiter", "Delivery", "Manager"],
+      enum: ["Admin", "Chef", "Waiter", "Delivery", "Manager", "Cashier"],
       default: "Waiter",
     },
     salary: { type: Number, required: true },
@@ -47,8 +47,6 @@ const workerSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
-
-
 
 const Worker = mongoose.model("Worker", workerSchema);
 module.exports = Worker;

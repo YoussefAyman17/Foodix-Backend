@@ -43,35 +43,36 @@ class ApiFeatures {
     return this;
   }
 
-  search(modalName) {
-    if (this.queryString.keyword) {
+  search(modelName) {
+    // Support both req.query.keyword and req.query.search
+    const searchTerm = this.queryString.keyword || this.queryString.search;
+
+    if (searchTerm) {
       let query = {};
 
-      if (modalName === "Meal") {
+      if (modelName === "Meal") {
         query.$or = [
-          { name: { $regex: this.queryString.keyword, $options: "i" } },
-          { description: { $regex: this.queryString.keyword, $options: "i" } },
+          { name: { $regex: searchTerm, $options: "i" } },
+          { description: { $regex: searchTerm, $options: "i" } },
         ];
-      } else if (modalName === "Review") {
+      } else if (modelName === "Review") {
+        query.$or = [{ comment: { $regex: searchTerm, $options: "i" } }];
+      } else if (modelName === "Category") {
         query.$or = [
-          { comment: { $regex: this.queryString.keyword, $options: "i" } },
+          { name: { $regex: searchTerm, $options: "i" } },
+          { description: { $regex: searchTerm, $options: "i" } },
         ];
-      } else if (modalName === "Category") {
+      } else if (modelName === "User") {
         query.$or = [
-          { name: { $regex: this.queryString.keyword, $options: "i" } },
-          { description: { $regex: this.queryString.keyword, $options: "i" } },
+          { userName: { $regex: searchTerm, $options: "i" } },
+          { email: { $regex: searchTerm, $options: "i" } },
         ];
-      } else if (modalName === "User") {
+      } else if (modelName === "Complaint") {
         query.$or = [
-          { userName: { $regex: this.queryString.keyword, $options: "i" } },
-          { email: { $regex: this.queryString.keyword, $options: "i" } },
-        ];
-      } else if (modalName === "Complaint") {
-        query.$or = [
-          { name: { $regex: this.queryString.keyword, $options: "i" } },
-          { email: { $regex: this.queryString.keyword, $options: "i" } },
-          { subject: { $regex: this.queryString.keyword, $options: "i" } },
-          { message: { $regex: this.queryString.keyword, $options: "i" } },
+          { name: { $regex: searchTerm, $options: "i" } },
+          { email: { $regex: searchTerm, $options: "i" } },
+          { subject: { $regex: searchTerm, $options: "i" } },
+          { message: { $regex: searchTerm, $options: "i" } },
         ];
       }
 
