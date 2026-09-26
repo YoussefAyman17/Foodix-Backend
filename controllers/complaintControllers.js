@@ -1,7 +1,7 @@
 const complaintModel = require("../models/complaintModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../Utils/customError");
-const ApiFeatures = require("../Utils/apiFeatures");
+const CustomError = require("../utils/customError");
+const ApiFeatures = require("../utils/apiFeatures");
 
 let createComplaint = asyncErrorHandler(async (req, res, next) => {
   let newComplaint = req.body;
@@ -9,18 +9,18 @@ let createComplaint = asyncErrorHandler(async (req, res, next) => {
     newComplaint.userId = req.user.id;
   }
   let complaint = await complaintModel.create(newComplaint);
-  res.status(201).json({ 
-    message: req.user ? "Complaint Created Successfully" : "Guest Complaint Created Successfully", 
-    Data: complaint });
+  res.status(201).json({
+    message: req.user
+      ? "Complaint Created Successfully"
+      : "Guest Complaint Created Successfully",
+    Data: complaint,
+  });
 });
 
 const getAllComplaint = asyncErrorHandler(async (req, res, next) => {
   const totalDocuments = await complaintModel.countDocuments();
 
-  const features = new ApiFeatures(
-    complaintModel.find(),
-    req.query
-  )
+  const features = new ApiFeatures(complaintModel.find(), req.query)
     .filter()
     .sort()
     .search("Complaint")
@@ -38,7 +38,7 @@ const getAllComplaint = asyncErrorHandler(async (req, res, next) => {
 
 let getComplaintById = asyncErrorHandler(async (req, res, next) => {
   let complaintId = req.params.id;
-  let complaint = await complaintModel.findById(complaintId );
+  let complaint = await complaintModel.findById(complaintId);
   if (!complaint) {
     return next(new CustomError("Complaint Not Found", 404));
   }
@@ -82,7 +82,7 @@ let editComplaint = asyncErrorHandler(async (req, res, next) => {
   );
 
   res.status(200).json({
-    success: 'success',
+    success: "success",
     message: "Complaint Updated Successfully",
     Data: updatedComplaint,
   });
@@ -104,8 +104,8 @@ let changeStatus = asyncErrorHandler(async (req, res, next) => {
   let { id } = req.params;
   let { status, adminResponse } = req.body;
 
-  let complaint = await complaintModel.findOneAndUpdate(
-    { id: id },
+  let complaint = await complaintModel.findByIdAndUpdate(
+    id,
     { status, adminResponse },
     {
       new: true,

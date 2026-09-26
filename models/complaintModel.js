@@ -36,16 +36,16 @@ const ComplaintSchema = new mongoose.Schema(
       maxlength: [20, "Service must be at most 20 characters"],
       enum: ["Delivery", "Food Quality", "Payment Issue", "App Bug", "Other"],
     },
-    message: {
+    description: {
       type: String,
       trim: true,
-      required: [true, "Message content is required"],
-      maxlength: [500, "Message must be at most 500 characters"],
+      required: [true, "Description content is required"],
+      maxlength: [500, "Description must be at most 500 characters"],
     },
     status: {
       type: String,
       trim: true,
-      enum: ["pending", "in process", "resolved","rejected"],
+      enum: ["pending", "in process", "resolved", "rejected"],
       default: "pending",
     },
     adminResponse: {
@@ -57,7 +57,10 @@ const ComplaintSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.ObjectId,
       ref: "User",
-      // required: true,
+    },
+    orderId: {
+      type: mongoose.Schema.ObjectId,
+      ref: "Order",
     },
   },
   {
