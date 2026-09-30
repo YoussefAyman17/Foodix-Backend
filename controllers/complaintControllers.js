@@ -54,7 +54,7 @@ let getComplaintById = asyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  res.status(200).json({ success: true, Data: complaint });
+  res.status(200).json({ status: "success", data: complaint });
 });
 
 let editComplaint = asyncErrorHandler(async (req, res, next) => {
@@ -91,9 +91,7 @@ let deleteComplaint = asyncErrorHandler(async (req, res, next) => {
   let { id } = req.params;
   let Complaint = await complaintModel.findByIdAndDelete(id);
   if (Complaint) {
-    res
-      .status(200)
-      .json({ message: "Complaint deleted Succesfully", DeletedId: id });
+    res.status(204).json({ status: "success", data: Complaint });
   } else {
     next(new CustomError("Complaint Not Found", 404));
   }
@@ -114,8 +112,8 @@ let changeStatus = asyncErrorHandler(async (req, res, next) => {
 
   if (complaint) {
     res.status(200).json({
-      message: "Status Complaint Updated Successfully",
-      Data: complaint,
+      status: "success",
+      data: complaint,
     });
   } else {
     next(new CustomError("Complaint Not Found", 404));
