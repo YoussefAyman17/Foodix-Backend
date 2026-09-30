@@ -309,6 +309,12 @@ let getUserById = asyncHandler(async (req, res, next) => {
   let user = await userModel.findById(id);
 
   if (user) {
+    user.password = null;
+    user.passwordResetCode = null;
+    user.passwordResetExpires = null;
+    user.passwordResetVerified = null;
+    user.passwordChangedAt = null;
+    user.googleId = null;
     res.status(200).json({ status: "success", data: user });
   } else {
     next(new CustomError("User Not Found", 404));
@@ -350,47 +356,43 @@ const getMe = (req, res, next) => {
   next();
 };
 
-const updateMe = async (req, res) => {
-  try {
-    if (req.body.password) {
-      return res.status(400).json({
-        message:
-          "This route is not for password updates. Please use /updateMyPassword.",
-      });
-    }
-
-    const filteredBody = filterObj(
-      req.body,
-      "userName",
-      "email",
-      "phone",
-      "address",
+const updateMe = asyncHandler(async (req, res, next) => {
+  if (req.body.password) {
+    return next(
+      new CustomError(
+        "This route is not for password updates. Please use /updateMyPassword.",
+        400,
+      ),
     );
-
-    const updatedUser = await userModel.findByIdAndUpdate(
-      req.user.id,
-      filteredBody,
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({
-      message: "Your profile has been updated successfully",
-      user: updatedUser,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "This email is already in use" });
-    }
-    res.status(500).json({ error: error.message });
   }
-};
+
+  const filteredBody = filterObj(
+    req.body,
+    "userName",
+    "email",
+    "phone",
+    "address",
+  );
+
+  const updatedUser = await userModel.findByIdAndUpdate(
+    req.user.id,
+    filteredBody,
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+
+  if (!updatedUser) {
+    return next(new CustomError("User not found", 404));
+  }
+
+  return res.status(200).json({
+    status: "success",
+    message: "Your profile has been updated successfully",
+    data: updatedUser,
+  });
+});
 
 //
 module.exports = {

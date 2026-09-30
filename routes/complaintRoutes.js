@@ -12,7 +12,7 @@ let {
   getMyComplaints,
 } = require("../controllers/complaintControllers");
 
-router.post("/", createComplaint);
+router.post("/", optionalAuth, createComplaint);
 
 router.use(auth);
 

@@ -1,19 +1,20 @@
 const complaintModel = require("../models/complaintModel");
 const asyncErrorHandler = require("../utils/asyncErrorHandler");
-const CustomError = require("../utils/customError");
-const ApiFeatures = require("../utils/apiFeatures");
+const CustomError = require("../Utils/customError");
+const ApiFeatures = require("../Utils/apiFeatures");
 
-let createComplaint = asyncErrorHandler(async (req, res, next) => {
+const createComplaint = asyncErrorHandler(async (req, res, next) => {
   let newComplaint = req.body;
   if (req.user) {
     newComplaint.userId = req.user.id;
   }
   let complaint = await complaintModel.create(newComplaint);
   res.status(201).json({
+    status: "success",
     message: req.user
       ? "Complaint Created Successfully"
       : "Guest Complaint Created Successfully",
-    Data: complaint,
+    data: complaint,
   });
 });
 
@@ -59,7 +60,6 @@ let getComplaintById = asyncErrorHandler(async (req, res, next) => {
 let editComplaint = asyncErrorHandler(async (req, res, next) => {
   let complaintId = req.params.id;
   let complaint = await complaintModel.findById(complaintId);
-
   if (!complaint) {
     return next(new CustomError("Complaint Not Found", 404));
   }
@@ -73,18 +73,17 @@ let editComplaint = asyncErrorHandler(async (req, res, next) => {
     );
   }
 
-  const { name, email, subject, service, message } = req.body;
-
-  let updatedComplaint = await complaintModel.findOneAndUpdate(
+  const { name, email, subject, service, description, status } = req.body;
+  let updatedComplaint = await complaintModel.findByIdAndUpdate(
     complaintId,
-    { name, email, subject, service, message },
+    { name, email, subject, service, description, status },
     { new: true, runValidators: true },
   );
 
   res.status(200).json({
-    success: "success",
+    status: "success",
     message: "Complaint Updated Successfully",
-    Data: updatedComplaint,
+    data: updatedComplaint,
   });
 });
 
@@ -131,13 +130,9 @@ const getMyComplaints = asyncErrorHandler(async (req, res, next) => {
     .sort({ createdAt: -1 });
 
   res.status(200).json({
-    success: true,
-    message:
-      complaints.length === 0
-        ? "You haven't submitted any complaints yet"
-        : "Complaints retrieved successfully",
+    status: "success",
     results: complaints.length,
-    complaints: complaints,
+    data: complaints,
   });
 });
 

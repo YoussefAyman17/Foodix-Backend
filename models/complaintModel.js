@@ -55,11 +55,11 @@ const ComplaintSchema = new mongoose.Schema(
       default: "",
     },
     userId: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
     orderId: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
     },
   },
